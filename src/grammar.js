@@ -52,7 +52,7 @@ var grammar = {
             ["INDENT doBody outdentOrEof", "$$ = $2;"]
         ],
         "statement": [
-            ["LET function", "$$ = $2;"],
+            ["FN function", "$$ = $2;"],
             ["LET binding", "$$ = $2;"],
             ["dataDecl", "$$ = $1;"],
             ["typeDecl", "$$ = $1;"],
@@ -86,8 +86,8 @@ var grammar = {
             ["callArgument", "$$ = $1;"]
         ],
         "caseList": [
-            ["CASE pattern = expression", "$$ = [new yy.Case($2, $4)];"],
-            ["caseList TERMINATOR CASE pattern = expression", "$$ = $1; $1.push(new yy.Case($4, $6));"]
+            ["| CASE pattern = expression", "$$ = [new yy.Case($3, $5)];"],
+            ["caseList TERMINATOR | CASE pattern = expression", "$$ = $1; $1.push(new yy.Case($5, $7));"]
         ],
         "pattern": [
             ["innerPattern", "$$ = $1;"],
