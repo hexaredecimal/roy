@@ -141,7 +141,8 @@ var nodeRepl = function(opts) {
                 output = vm.runInNewContext(compiled.output, sandbox, 'eval');
 
                 if(typeof output != 'undefined') {
-                    colorLog(32, (typeof output == 'object' ? JSON.stringify(output) : output) + " : " + compiled.type);
+                    // colorLog(32, (typeof output == 'object' ? JSON.stringify(output) : output) + " : " + compiled.type);
+                    colorLog(32, output + " : " + compiled.type)
                 }
             }
         } catch(e) {
@@ -266,17 +267,32 @@ var runRoy = function(argv, opts) {
             exported: exported,
             sourceMap: sourceMap
         });
+
         if(opts.run) {
             // Execute the JavaScript output.
             var output = vm.runInNewContext(compiled.output, sandbox, 'eval');
         } else {
+            let output = `${compiled.output}\n`
+            if (output.includes("var main = function")) {
+              output += `\nmain();\n`
+            }
             // Write the JavaScript output.
-            fs.writeFile(outputPath, compiled.output + '//@ sourceMappingURL=' + path.basename(outputPath) + '.map\n', 'utf8');
-            fs.writeFile(outputPath + '.map', sourceMap.toString(), 'utf8');
-            writeModule(env, exported, filename.replace(extensions, '.roym'));
+            fs.writeFile(outputPath, output, (err) => {
+              if (err) throw err;
+            })
+            const proc = require("child_process")
+            const cmd = (cmd) => proc.execSync(cmd, { encoding: 'utf-8'});
+        
+          var binaryPath = filename.replace(extensions, '');
+          console.log(`build: qjsc ${outputPath}`)
+          //cmd(`qjsc ${outputPath}`)
+            //fs.writeFile(outputPath + '.map', sourceMap.toString(), 'utf8');
+            //writeModule(env, exported, filename.replace(extensions, '.roym'));
         }
     });
 };
+
+
 
 var processFlags = function(argv, opts) {
     if(argv.length === 0) {
