@@ -24,6 +24,7 @@ var keywordTokens = {
     'false':     'BOOLEAN',
     'Function':  'FUNCTION',
     'let':       'LET',
+    'fn':        'FN',
     'if':        'IF',
     'instance':  'INSTANCE',
     'then':      'THEN',
@@ -277,7 +278,7 @@ var tokenise = function(source, tokenizers) {
     while(chunk = source.slice(i)) {
         var diff = getDiff(chunk);
         if(!diff) {
-            throw "Couldn't tokenise: " + chunk.substring(0, chunk.indexOf("\n") > -1 ? chunk.indexOf("\n") : chunk.length);
+            throw "Couldn't tokenise: " + lineno + " : "+ chunk.substring(0, chunk.indexOf("\n") > -1 ? chunk.indexOf("\n") : chunk.length);
         }
         lineno += source.slice(i, i + diff).split('\n').length - 1;
         i += diff;
