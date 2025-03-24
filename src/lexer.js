@@ -70,7 +70,7 @@ var numberToken = function(chunk) {
 var stringToken = function(chunk) {
   var token = STRING.exec(chunk);
   if (token) {
-    tokens.push(['STRING', token[0], lineno]);
+    tokens.push(['STRING', token[0].replaceAll("'", "`"), lineno]);
     return token[0].length;
 
   }
@@ -265,6 +265,54 @@ var shebangToken = function(chunk) {
     return 0;
 };
 
+var getFileContents = function(filename) {
+    var fs = require('fs'),
+        filenames,
+        foundFilename;
+
+    filenames = /\..+$/.test(filename) ? // if an extension is specified,
+                [filename] :             // don't bother checking others
+                _.map(["", ".roy", ".lroy"], function(ext){
+                    return filename + ext;
+                });
+
+    foundFilename = _.find(filenames, function(filename) {
+        return fs.existsSync(filename);
+    });
+
+    if(foundFilename) {
+        return fs.readFileSync(foundFilename, 'utf8');
+    }
+    else {
+        throw new Error("File(s) not found: " + filenames.join(", "));
+    }
+};
+
+
+
+var lexerError = function (str, filename) {
+    var code = getFileContents(filename);
+    var line = lineno;
+    var splits = code.split("\n");
+
+    console.error("Lexer Error: " + str)
+    var snippet = "";
+    if (line <= 1 || line == splits.length - 1) {
+      snippet = code.split("\n")[line];
+      console.error((line === 0 ? 1 : line) + " | ", snippet);
+    } else if (line > 1 && line < splits.length - 1) {
+      snippet = splits[line-1];
+      console.error(line - 1 + " | ", snippet);
+      snippet = code.split("\n")[line];
+      console.error(line + " | ", snippet);
+      snippet = code.split("\n")[line+1];
+      console.error((line + 1) + " | ", snippet);
+    }
+
+    process.exit(1);
+};
+
+
 var tokenise = function(source, tokenizers) {
     /*jshint boss:true*/
     var i = 0, chunk;
@@ -278,7 +326,7 @@ var tokenise = function(source, tokenizers) {
     while(chunk = source.slice(i)) {
         var diff = getDiff(chunk);
         if(!diff) {
-            throw "Couldn't tokenise: " + lineno + " : "+ chunk.substring(0, chunk.indexOf("\n") > -1 ? chunk.indexOf("\n") : chunk.length);
+            throw "Couldn't tokenise: "+ chunk.substring(0, chunk.indexOf("\n") > -1 ? chunk.indexOf("\n") : chunk.length);
         }
         lineno += source.slice(i, i + diff).split('\n').length - 1;
         i += diff;
@@ -287,14 +335,19 @@ var tokenise = function(source, tokenizers) {
     return tokens;
 };
 
-exports.tokenise = function(source) {
+exports.tokenise = function(source, opts) {
     indent = 0;
     indents = [];
     tokens = [];
     lineno = 0;
-    
-    return tokenise(source, [identifierToken, numberToken,
-            stringToken, genericToken, commentToken, whitespaceToken,
-            lineToken, literalToken, shebangToken]
-            ).concat([['EOF', '', lineno]]);
+    opts = opts || {filename: "stdin"};
+
+    try {
+      return tokenise(source, [identifierToken, numberToken,
+              stringToken, genericToken, commentToken, whitespaceToken,
+              lineToken, literalToken, shebangToken]
+              ).concat([['EOF', '', lineno]]);
+    } catch (e) {
+      lexerError(e, opts.filename)
+    }
 };
