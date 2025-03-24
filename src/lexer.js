@@ -1,6 +1,8 @@
 var unicode = require('unicode-categories'),
     _ = require('underscore');
 
+var errors = require("./errors.js");
+
 // http://es5.github.com/#x7.6
 // ECMAscript identifier starts with `$`, `_`,
 // or letter from (Lu Ll Lt Lm Lo Nl) unicode groups.
@@ -265,52 +267,6 @@ var shebangToken = function(chunk) {
     return 0;
 };
 
-var getFileContents = function(filename) {
-    var fs = require('fs'),
-        filenames,
-        foundFilename;
-
-    filenames = /\..+$/.test(filename) ? // if an extension is specified,
-                [filename] :             // don't bother checking others
-                _.map(["", ".roy", ".lroy"], function(ext){
-                    return filename + ext;
-                });
-
-    foundFilename = _.find(filenames, function(filename) {
-        return fs.existsSync(filename);
-    });
-
-    if(foundFilename) {
-        return fs.readFileSync(foundFilename, 'utf8');
-    }
-    else {
-        throw new Error("File(s) not found: " + filenames.join(", "));
-    }
-};
-
-
-
-var lexerError = function (str, filename) {
-    var code = getFileContents(filename);
-    var line = lineno;
-    var splits = code.split("\n");
-
-    console.error("Lexer Error: " + str)
-    var snippet = "";
-    if (line <= 1 || line == splits.length - 1) {
-      snippet = code.split("\n")[line];
-      console.error((line === 0 ? 1 : line) + " | ", snippet);
-    } else if (line > 1 && line < splits.length - 1) {
-      snippet = splits[line-1];
-      console.error(line - 1 + " | ", snippet);
-      snippet = code.split("\n")[line];
-      console.error(line + " | ", snippet);
-      snippet = code.split("\n")[line+1];
-      console.error((line + 1) + " | ", snippet);
-    }
-
-    process.exit(1);
-};
 
 
 var tokenise = function(source, tokenizers) {
@@ -348,6 +304,7 @@ exports.tokenise = function(source, opts) {
               lineToken, literalToken, shebangToken]
               ).concat([['EOF', '', lineno]]);
     } catch (e) {
-      lexerError(e, opts.filename)
+      // lexerError(e, opts.filename);
+      errors.reportError(opts.filename, lineno, e);
     }
 };
