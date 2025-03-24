@@ -30,6 +30,59 @@ parser.lexer = typeparser.lexer =  {
     }
 };
 
+
+var getFileContents = function(filename) {
+    var fs = require('fs'),
+        filenames,
+        foundFilename;
+
+    filenames = /\..+$/.test(filename) ? // if an extension is specified,
+                [filename] :             // don't bother checking others
+                _.map(["", ".roy", ".lroy"], function(ext){
+                    return filename + ext;
+                });
+
+    foundFilename = _.find(filenames, function(filename) {
+        return fs.existsSync(filename);
+    });
+
+    if(foundFilename) {
+        return fs.readFileSync(foundFilename, 'utf8');
+    }
+    else {
+        throw new Error("File(s) not found: " + filenames.join(", "));
+    }
+};
+
+
+
+parser.parseError = function (str, hash) {
+    var filename = this.yy.filename || "unknown file";
+    var code = getFileContents(filename);
+    var line = hash.line;
+    var token = hash.token;
+    var splits = code.split("\n");
+
+    console.error("Syntax Error: Encountered unexpected token: `" + token + "`");
+    var snippet = "";
+    if (line <= 1 || line == splits.length - 1) {
+      snippet = code.split("\n")[line];
+      console.error((line === 0 ? 1 : line) + " | ", snippet);
+    } else if (line > 1 && line < splits.length - 1) {
+      snippet = splits[line-1];
+      console.error(line - 1 + " | ", snippet);
+      snippet = code.split("\n")[line];
+      console.error(line + " | ", snippet);
+      snippet = code.split("\n")[line+1];
+      console.error((line + 1) + " | ", snippet);
+    }
+
+    process.exit(1);
+};
+
+
+
+
 var jsNodeIsExpression = function (node) {
     return !! (/Expression$/.test(node.type) || node.type === 'Identifier' || node.type === 'Literal');
 };
@@ -872,8 +925,10 @@ var compile = function(source, env, aliases, opts) {
 
     if(!opts.exported) opts.exported = {};
 
+    parser.yy.filename = opts.filename || "stdin";
+
     // Parse the file to an AST.
-    var tokens = lexer.tokenise(source);
+    var tokens = lexer.tokenise(source, {filename: opts.filename});
     var ast = parser.parse(tokens);
 
     // Typecheck the AST. Any type errors will throw an exception.
