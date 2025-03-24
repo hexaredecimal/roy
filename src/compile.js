@@ -57,27 +57,12 @@ var getFileContents = function(filename) {
 
 
 parser.parseError = function (str, hash) {
-    var filename = this.yy.filename || "unknown file";
-    var code = getFileContents(filename);
-    var line = hash.line;
-    var token = hash.token;
-    var splits = code.split("\n");
-
-    console.error("Syntax Error: Encountered unexpected token: `" + token + "`");
-    var snippet = "";
-    if (line <= 1 || line == splits.length - 1) {
-      snippet = code.split("\n")[line];
-      console.error((line === 0 ? 1 : line) + " | ", snippet);
-    } else if (line > 1 && line < splits.length - 1) {
-      snippet = splits[line-1];
-      console.error(line - 1 + " | ", snippet);
-      snippet = code.split("\n")[line];
-      console.error(line + " | ", snippet);
-      snippet = code.split("\n")[line+1];
-      console.error((line + 1) + " | ", snippet);
-    }
-
-    process.exit(1);
+  var errors = require("./errors.js");
+  var filename = this.yy.filename || "stdin";
+  var line = hash.line;
+  var token = hash.token;
+  var message = "Encountered unexpected token: `" + token + "`";
+  errors.reportError(filename, line, message);
 };
 
 
