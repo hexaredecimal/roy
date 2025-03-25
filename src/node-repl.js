@@ -75,7 +75,7 @@ var nodeRepl = function(opts) {
     var fs = require('fs');
     var prelude = fs.readFileSync(path.dirname(__dirname) + '/lib/prelude.roy', 'utf8');
     vm.runInNewContext(compile(prelude, env, {}, {nodejs: true}).output, sandbox, 'eval');
-    repl.setPrompt('roy> ');
+    repl.setPrompt('λ ');
     repl.on('close', function() {
         stdin.destroy();
     });
@@ -111,7 +111,7 @@ var nodeRepl = function(opts) {
                 joined = block.join('\n');
 
                 inBlock = false;
-                repl.setPrompt('roy> ');
+                repl.setPrompt('λ ');
                 block = [];
 
                 // Remember the source if it's a binding
@@ -141,8 +141,7 @@ var nodeRepl = function(opts) {
                 output = vm.runInNewContext(compiled.output, sandbox, 'eval');
 
                 if(typeof output != 'undefined') {
-                    // colorLog(32, (typeof output == 'object' ? JSON.stringify(output) : output) + " : " + compiled.type);
-                    colorLog(32, output + " : " + compiled.type)
+                    colorLog(32, (typeof output == 'object' ? JSON.stringify(output) : output) + " : " + compiled.type);
                 }
             }
         } catch(e) {
