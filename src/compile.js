@@ -31,31 +31,6 @@ parser.lexer = typeparser.lexer =  {
 };
 
 
-var getFileContents = function(filename) {
-    var fs = require('fs'),
-        filenames,
-        foundFilename;
-
-    filenames = /\..+$/.test(filename) ? // if an extension is specified,
-                [filename] :             // don't bother checking others
-                _.map(["", ".roy", ".lroy"], function(ext){
-                    return filename + ext;
-                });
-
-    foundFilename = _.find(filenames, function(filename) {
-        return fs.existsSync(filename);
-    });
-
-    if(foundFilename) {
-        return fs.readFileSync(foundFilename, 'utf8');
-    }
-    else {
-        throw new Error("File(s) not found: " + filenames.join(", "));
-    }
-};
-
-
-
 parser.parseError = function (str, hash) {
   var errors = require("./errors.js");
   var filename = this.yy.filename || "stdin";
@@ -911,6 +886,7 @@ var compile = function(source, env, aliases, opts) {
     if(!opts.exported) opts.exported = {};
 
     parser.yy.filename = opts.filename || "stdin";
+    env.filename = parser.yy.filename;
 
     // Parse the file to an AST.
     var tokens = lexer.tokenise(source, {filename: opts.filename});
