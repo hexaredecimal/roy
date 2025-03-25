@@ -151,9 +151,9 @@ FunctionType.prototype.fresh = function(nonGeneric, mappings) {
     }), newTypeClasses);
 };
 FunctionType.prototype.toString = function() {
-    return this.name + "(" + _.map(this.types, function(type) {
+    return _.map(this.types, function(type) {
         return type.toString();
-    }).join(', ') + ")";
+    }).join(' -> ');
 };
 exports.FunctionType = FunctionType;
 
