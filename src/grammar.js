@@ -55,7 +55,7 @@ var grammar = {
       ["INDENT doBody outdentOrEof", "$$ = $2;"]
     ],
     "statement": [
-      ["FN function", "$$ = $2;"],
+      ["LET function", "$$ = $2;"],
       ["LET binding", "$$ = $2;"],
       ["dataDecl", "$$ = $1;"],
       ["typeDecl", "$$ = $1;"],
@@ -66,7 +66,7 @@ var grammar = {
       ["innerExpression", "$$ = $1;"],
       ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
       ["LAMBDA paramList optType RIGHTARROW block", n("$$ = new yy.Function(undefined, $2, $5, $3);")],
-      ["MATCH innerExpression INDENT caseList outdentOrEof", n("$$ = new yy.Match($2, $4);")],
+      ["innerExpression MATCH INDENT caseList outdentOrEof", n("$$ = new yy.Match($1, $4);")],
       ["DO innerExpression doBlock", n("$$ = new yy.Do($2, $3);")],
       ["ifThenElse", "$$ = $1;"]
     ],
@@ -110,10 +110,10 @@ var grammar = {
       ["IF innerExpression THEN innerExpression ELSE innerExpression", n("$$ = new yy.IfThenElse($2, [$4], [$6]);")]
     ],
 
-    // data Maybe a = Some a | None
+    // type Maybe a = Some a | None
     "dataDecl": [
-      ["DATA IDENTIFIER optDataParamList = dataList", n("$$ = new yy.Data($2, $3, $5);")],
-      ["DATA IDENTIFIER optDataParamList = INDENT dataList outdentOrEof", n("$$ = new yy.Data($2, $3, $6);")]
+      ["TYPE IDENTIFIER optDataParamList = dataList", n("$$ = new yy.Data($2, $3, $5);")],
+      ["TYPE IDENTIFIER optDataParamList = INDENT dataList outdentOrEof", n("$$ = new yy.Data($2, $3, $6);")]
     ],
     "dataList": [
       ["IDENTIFIER optTypeParamList", "$$ = [new yy.Tag($1, $2)];"],
