@@ -856,7 +856,11 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             var lines = c.value.split(/\r\n|\r|\n/g);
             return {
                 type: lines.length > 1 ? "Block" : "Line",
-                value: c.value
+                value:  c.value
+		  .replace(/^\/\*+|\*+\/$/g, '')
+		  .replace(/^\s*\*?/gm, '*')
+		  .replace(/^\s*\n?/, '\n')
+		  .replace(/\s*$/, '\n')
             };
         });
     }

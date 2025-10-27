@@ -15,11 +15,12 @@ var IDENTIFIER = new RegExp(
 
 var NUMBER = /^-?[0-9]+(\.[0-9]+)?([eE][\-\+]?[0-9]+)?/;
 var STRING = /^(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/;
-var COMMENT = /^\/\/.*/;
 var WHITESPACE = /^[^\n\S]+/;
 var INDENT = /^(?:\n[^\n\S]*)+/;
 var GENERIC = /^#([a-z]+)/;
 var SHEBANG = /^#!.*/;
+var SINGLE_COMMENT = /^\/\/[^\n]*/;
+var MULTI_COMMENT  = /^\/\*[\s\S]*?\*\//;
 
 var keywordTokens = {
     'true':      'BOOLEAN',
@@ -89,10 +90,12 @@ var genericToken = function(chunk) {
 };
 
 var commentToken = function(chunk) {
-    var token = COMMENT.exec(chunk);
-    if(token) {
-        tokens.push(['COMMENT', token[0], lineno]);
-        return token[0].length;
+    var token = SINGLE_COMMENT.exec(chunk) || MULTI_COMMENT.exec(chunk);
+    if (token) {
+        var value = token[0];
+        tokens.push(['COMMENT', value, lineno]);
+        lineno += (value.match(/\n/g) || []).length;
+        return value.length;
     }
     return 0;
 };
@@ -111,36 +114,12 @@ var lineContinuer = {
     "where": true
 };
 
-var lineToken = function(chunk) {
-    var token = INDENT.exec(chunk);
-    if(token) {
-        var lastNewline = token[0].lastIndexOf("\n") + 1;
-        var size = token[0].length - lastNewline;
-        if(size > indent) {
-            indents.push(size);
-            tokens.push(['INDENT', size - indent, lineno]);
-        } else {
-            if(size < indent) {
-                var last = indents[indents.length - 1];
-                while(size < last) {
-                    tokens.push(['OUTDENT', last - size, lineno]);
-                    indents.pop();
-                    last = indents[indents.length - 1];
-                }
-            }
-            if(tokens.length > 0) {
-                var lookahead = IDENTIFIER.exec(chunk.slice(token[0].length));
-
-                if (!lookahead || !lineContinuer[lookahead[0]]) {
-                    tokens.push(['TERMINATOR', token[0].substring(0, lastNewline), lineno]);
-                }
-            }
-        }
-
-        indent = size;
-        return token[0].length;
-    }
-    return 0;
+var lineToken = function(chunk) {  
+    var token = INDENT.exec(chunk);  
+    if(token) {  
+        return token[0].length;  // Just consume, don't generate tokens  
+    }  
+    return 0;  
 };
 
 var literalToken = function(chunk) {

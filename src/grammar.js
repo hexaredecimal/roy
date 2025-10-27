@@ -24,50 +24,31 @@ var grammar = {
   "bnf": {
     "program": [
       ["EOF", "return new yy.Module([]);"],
-      ["SHEBANG TERMINATOR body EOF", "return new yy.Module($3);"],
-      ["SHEBANG TERMINATOR EOF", "return new yy.Module([]);"],
+      ["SHEBANG body EOF", "return new yy.Module($2);"],
+      ["SHEBANG EOF", "return new yy.Module([]);"],
       ["body EOF", "return new yy.Module($1);"]
     ],
     "body": [
       ["line", "$$ = [$1];"],
-      ["body TERMINATOR line", "$$ = $1; $1.push($3);"],
-      ["body TERMINATOR", "$$ = $1;"]
+      ["body line", "$$ = $1; $1.push($2);"],
+      ["body", "$$ = $1;"]
     ],
     "line": [
       ["statement", "$$ = $1;"],
       ["expression", "$$ = $1;"],
       ["COMMENT", n("$$ = new yy.Comment($1);")]
     ],
-    "block": [
-      ["INDENT body outdentOrEof", "$$ = $2;"]
-    ],
-    "doBody": [
-      ["doLine", "$$ = [$1];"],
-      ["doBody TERMINATOR doLine", "$$ = $1; $1.push($3);"],
-      ["doBody TERMINATOR", "$$ = $1;"]
-    ],
-    "doLine": [
-      ["line", "$$ = $1;"],
-      ["IDENTIFIER LEFTARROW expression", n("$$ = new yy.Bind($1, $3);")],
-      ["RETURN expression", n("$$ = new yy.Return($2);")]
-    ],
-    "doBlock": [
-      ["INDENT doBody outdentOrEof", "$$ = $2;"]
-    ],
     "statement": [
       ["LET function", "$$ = $2;"],
       ["LET binding", "$$ = $2;"],
       ["dataDecl", "$$ = $1;"],
-      ["typeDecl", "$$ = $1;"],
-      ["typeClassDecl", "$$ = $1;"],
-      ["instanceDecl", "$$ = $1;"]
+      ["typeDecl", "$$ = $1;"]
     ],
     "expression": [
       ["innerExpression", "$$ = $1;"],
       ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
       ["LAMBDA paramList optType RIGHTARROW block", n("$$ = new yy.Function(undefined, $2, $5, $3);")],
-      ["innerExpression MATCH INDENT caseList outdentOrEof", n("$$ = new yy.Match($1, $4);")],
-      ["DO innerExpression doBlock", n("$$ = new yy.Do($2, $3);")],
+      ["innerExpression MATCH caseList", n("$$ = new yy.Match($1, $3);")],
       ["ifThenElse", "$$ = $1;"]
     ],
     "callArgument": [
@@ -90,7 +71,7 @@ var grammar = {
     ],
     "caseList": [
       ["| CASE pattern = expression", "$$ = [new yy.Case($3, $5)];"],
-      ["caseList TERMINATOR | CASE pattern = expression", "$$ = $1; $1.push(new yy.Case($5, $7));"]
+      ["caseList | CASE pattern = expression", "$$ = $1; $1.push(new yy.Case($4, $6));"]
     ],
     "pattern": [
       ["innerPattern", "$$ = $1;"],
@@ -106,14 +87,13 @@ var grammar = {
       ["patternIdentifiers identifier", "$$ = $1; $1.push($2);"]
     ],
     "ifThenElse": [
-      ["IF innerExpression THEN block TERMINATOR ELSE block", n("$$ = new yy.IfThenElse($2, $4, $7);")],
+      ["IF innerExpression THEN block ELSE block", n("$$ = new yy.IfThenElse($2, $4, $6);")],
       ["IF innerExpression THEN innerExpression ELSE innerExpression", n("$$ = new yy.IfThenElse($2, [$4], [$6]);")]
     ],
 
     // type Maybe a = Some a | None
     "dataDecl": [
-      ["TYPE IDENTIFIER optDataParamList = dataList", n("$$ = new yy.Data($2, $3, $5);")],
-      ["TYPE IDENTIFIER optDataParamList = INDENT dataList outdentOrEof", n("$$ = new yy.Data($2, $3, $6);")]
+      ["TYPE IDENTIFIER optDataParamList = dataList", n("$$ = new yy.Data($2, $3, $5);")]
     ],
     "dataList": [
       ["IDENTIFIER optTypeParamList", "$$ = [new yy.Tag($1, $2)];"],
@@ -136,25 +116,11 @@ var grammar = {
     "dataParamList": typegrammar.dataParamList,
     "optDataParamList": typegrammar.optDataParamList,
 
-    "typeClassDecl": [
-      ["TYPECLASS IDENTIFIER GENERIC { INDENT typeClassLines outdentOrEof TERMINATOR }", "$$ = new yy.TypeClass($2, new yy.Generic($3), $6);"]
-    ],
-    "typeClassLines": [
-      ["IDENTIFIER : type", "$$ = {}; $$[$1] = $3;"],
-      ["typeClassLines TERMINATOR IDENTIFIER : type", "$$ = $1; $1[$3] = $5;"]
-    ],
-
-    "instanceDecl": [
-      ["INSTANCE IDENTIFIER = IDENTIFIER type object", "$$ = new yy.Instance($2, $4, $5, $6);"]
-    ],
-
     "function": [
-      ["IDENTIFIER paramList optType = block optWhere", n("$$ = new yy.Function($1, $2, $5, $3, $6);")],
-      ["IDENTIFIER paramList optType = expression", n("$$ = new yy.Function($1, $2, [$5], $3, []);")]
+      ["IDENTIFIER paramList optType = expression optWhere", n("$$ = new yy.Function($1, $2, [$5], $3, $6);")]
     ],
     "binding": [
-      ["IDENTIFIER optType = expression", n("$$ = new yy.Let($1, $4, $2);")],
-      ["IDENTIFIER optType = INDENT expression outdentOrEof", n("$$ = new yy.Let($1, $5, $2);")]
+      ["IDENTIFIER optType = expression", n("$$ = new yy.Let($1, $4, $2);")]
     ],
     "paramList": [
       ["( )", "$$ = [];"],
@@ -172,11 +138,11 @@ var grammar = {
     ],
     "optWhere": [
       ["", "$$ = [];"],
-      ["WHERE INDENT whereDecls outdentOrEof", "$$ = $3;"]
+      ["WHERE whereDecls", "$$ = $2;"]
     ],
     "whereDecls": [
       ["whereDecl", "$$ = [$1];"],
-      ["whereDecls TERMINATOR whereDecl", "$$ = $1; $1.push($3);"]
+      ["whereDecls whereDecl", "$$ = $1; $1.push($2);"]
     ],
     "whereDecl": [
       ["dataDecl", "$$ = $1;"],
@@ -214,42 +180,25 @@ var grammar = {
     ],
     "optValues": [
       ["", "$$ = [];"],
-      ["INDENT arrayValues OUTDENT TERMINATOR", "$$ = $2;"],
       ["arrayValues", "$$ = $1;"]
     ],
     "arrayValues": [
       ["expression", "$$ = [$1];"],
       ["arrayValues , expression", "$$ = $1; $1.push($3);"],
-      ["arrayValues , TERMINATOR expression", "$$ = $1; $1.push($4);"]
+      ["arrayValues , expression", "$$ = $1; $1.push($3);"]
     ],
     "optPairs": [
       ["", "$$ = {};"],
-      ["INDENT keyPairs OUTDENT TERMINATOR", "$$ = $2;"],
       ["keyPairs", "$$ = $1;"]
     ],
     "keyPairs": [
       ["keywordOrIdentifier : expression", "$$ = {}; $$[$1] = $3;"],
-      ["keyPairs , keywordOrIdentifier : expression", "$$ = $1; $1[$3] = $5;"],
-      ["keyPairs TERMINATOR optTerm keywordOrIdentifier : expression", "$$ = $1; $1[$4] = $6;"],
-      ["STRING : expression", "$$ = {}; $$[$1] = $3;"],
-      ["keyPairs , STRING : expression", "$$ = $1; $1[$3] = $5;"],
-      ["keyPairs TERMINATOR optTerm STRING : expression", "$$ = $1; $1[$4] = $6;"],
-      ["NUMBER : expression", "$$ = {}; $$[$1] = $3;"],
-      ["keyPairs , NUMBER : expression", "$$ = $1; $1[$3] = $5;"],
-      ["keyPairs TERMINATOR optTerm NUMBER : expression", "$$ = $1; $1[$4] = $6;"]
-    ],
-    "optTerm": [
-      ["", ""],
-      ["TERMINATOR", ""]
+      ["keyPairs , keywordOrIdentifier : expression", "$$ = $1; $1[$3] = $5;"]
     ],
     "accessor": [
       ["IDENTIFIER", n("$$ = new yy.Identifier($1);")],
       ["accessor . keywordOrIdentifier", n("$$ = new yy.PropertyAccess($1, $3);")],
       ["( expression ) . keywordOrIdentifier", n("$$ = new yy.PropertyAccess($2, $5);")]
-    ],
-    "outdentOrEof": [
-      ["OUTDENT", ""],
-      ["EOF", ""]
     ],
     "keywordOrIdentifier": typegrammar.keywordOrIdentifier,
     "identifier": [
