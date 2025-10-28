@@ -11,17 +11,18 @@ FP concepts while still being imparative.
 - [ ] No `do` block/Monads
 - [ ] Function currying
 - [ ] Structural typing
-- [ ] Modules
+- [ ] Modules (Golang inspired)
 - [ ] Include files
 - [ ] Pattern matching
 - [ ] Typed external functions
 - [ ] Operator overloading
+- [ ] Mutability/References
+- [ ] Custom stdlib (With few external functions)
 
 ## What I aim to achieve
 ```ocaml
 
 open Std.Printf
-
 
 let add a b = sum a b
   where
@@ -33,4 +34,11 @@ let main =
 ```
 
 ## References
-[Archived Roy](https://github.com/puffnfresh/roy)
+[Archived Roy](https://github.com/puffnfresh/roy) - This repository was archived by the owner on Nov 23, 2017. It is now read-only.
+
+## Reference Projects
+[Reason ML](https://reasonml.github.io/en/)
+[Ocaml](https://ocaml.org/)
+[Sml](https://smlfamily.github.io/)
+[F#](https://fsharp.org/)
+

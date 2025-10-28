@@ -10,11 +10,11 @@ module.exports = function(grunt) {
             './lib/parser.js': './src/grammar.js'
         },
         cjsify: {
-            'roy.js': {
+            'royml.js': {
                 entry: 'src/compile.js',
                 dir: __dirname,
                 options: {
-                    'export': 'roy',
+                    'export': 'royml',
                     'ignoreMissing': true,
                     'node': false
                 }
@@ -38,8 +38,8 @@ module.exports = function(grunt) {
         },
         jshint: {
             options: {
-                es3: true,
-                indent: 4,
+                es5: true,
+                indent: 2,
                 noarg: true,
                 node: true,
                 trailing: true,

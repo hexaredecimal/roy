@@ -7,14 +7,10 @@ deps:
 	npm install
 	npm prune
 
-site: all
-	[ -e roy.brianmckenna.org ] || mkdir roy.brianmckenna.org
-	cp -r site/* roy.brianmckenna.org/
-	cp -r examples roy.brianmckenna.org/
-	cp node_modules/underscore/underscore-min.js roy.brianmckenna.org/
-	cp package.json roy.brianmckenna.org/
-	cp roy-min.js roy.brianmckenna.org/
-
+site:
+	cd site/royml.fly.dev
+	npm run build
+	cd ../../
 extension:
 	cp roy-min.js misc/chrome-extension/
 
