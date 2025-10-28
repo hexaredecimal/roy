@@ -19,8 +19,7 @@ var WHITESPACE = /^[^\n\S]+/;
 var INDENT = /^(?:\n[^\n\S]*)+/;
 var GENERIC = /^#([a-z]+)/;
 var SHEBANG = /^#!.*/;
-var SINGLE_COMMENT = /^\/\/[^\n]*/;
-var MULTI_COMMENT  = /^\/\*[\s\S]*?\*\//;
+var COMMENT = /^\/\/.*|^\/\*[\s\S]*?\*\//;
 
 var keywordTokens = {
     'true':      'BOOLEAN',
@@ -90,15 +89,14 @@ var genericToken = function(chunk) {
 };
 
 var commentToken = function(chunk) {
-    var token = SINGLE_COMMENT.exec(chunk) || MULTI_COMMENT.exec(chunk);
-    if (token) {
-        var value = token[0];
-        tokens.push(['COMMENT', value, lineno]);
-        lineno += (value.match(/\n/g) || []).length;
-        return value.length;
+    var token = COMMENT.exec(chunk);
+    if(token) {
+        tokens.push(['COMMENT', token[0], lineno]);
+        return token[0].length;
     }
     return 0;
 };
+
 
 var whitespaceToken = function(chunk) {
     var token = WHITESPACE.exec(chunk);
