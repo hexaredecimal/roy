@@ -844,25 +844,28 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             extraComments = extraComments.concat(n.comments);
         }
     } else {
-        if (extraComments && extraComments.length) {
-            if (! (n.comments && n.comments.length)) {
-                n.comments = extraComments;
-            } else {
-                n.comments = extraComments.concat(n.comments);
-            }
-            extraComments = [];
-        }
-        result.leadingComments = _.map(n.comments, function (c) {
-            var lines = c.value.split(/\r\n|\r|\n/g);
-            return {
-                type: lines.length > 1 ? "Block" : "Line",
-                value:  c.value
-		  .replace(/^\/\*+|\*+\/$/g, '')
-		  .replace(/^\s*\*?/gm, '*')
-		  .replace(/^\s*\n?/, '\n')
-		  .replace(/\s*$/, '\n')
-            };
-        });
+	    if (extraComments && extraComments.length) {
+		    if (! (n.comments && n.comments.length)) {
+			    n.comments = extraComments;
+		    } else {
+			    n.comments = extraComments.concat(n.comments);
+		    }
+		    extraComments = [];
+	    }
+	    result.leadingComments = _.map(n.comments, function (c) {
+		    if (c.value.startsWith('/*')) {
+			    var inner = c.value.slice(2, -2);
+			    return {
+				    type: "Block",
+				    value: inner  
+			    };
+		    } else {
+			    return {
+				    type: "Line",
+				    value: c.value.slice(2).trim()
+			    };
+		    }
+	    });
     }
     return result;
 };
