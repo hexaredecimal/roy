@@ -1,0 +1,7 @@
+type Option a = Some a | None
+
+let unwrap option = 
+  when option
+    | Some a = a
+    | None = .. // TODO: 
+

@@ -4,4 +4,3 @@ let gcd a b =
   else
     gcd b (a % b)
 
-console.log (gcd 49 35)
