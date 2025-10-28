@@ -41,6 +41,7 @@ var reportError = function (filename, line, message) {
       console.error(line - 1 + " | ", snippet);
       snippet = code.split("\n")[line];
       console.error(line + " | ", snippet);
+      console.error(" ".repeat((line + " | ").length) + " ^");
       snippet = code.split("\n")[line+1];
       console.error((line + 1) + " | ", snippet);
     }
