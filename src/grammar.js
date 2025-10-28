@@ -31,7 +31,6 @@ var grammar = {
     "body": [
       ["line", "$$ = [$1];"],
       ["body line", "$$ = $1; $1.push($2);"],
-      ["body", "$$ = $1;"]
     ],
     "line": [
       ["statement", "$$ = $1;"],
