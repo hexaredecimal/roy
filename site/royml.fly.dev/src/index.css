@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 280 85% 65%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 180 75% 55%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 30 95% 60%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 280 85% 65%;
+
+    --radius: 0.75rem;
+
+    /* Glass effect tokens */
+    --glass-background: 0 0% 12% / 0.5;
+    --glass-border: 0 0% 80% / 0.1;
+    
+    /* Gradient tokens */
+    --gradient-primary: linear-gradient(135deg, hsl(280 85% 65%), hsl(180 75% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(30 95% 60%), hsl(280 85% 65%));
+    --gradient-bg: linear-gradient(to bottom right, hsl(0 0% 7%), hsl(280 20% 10%), hsl(0 0% 7%));
+    
+    /* Shadow tokens */
+    --shadow-glow: 0 0 40px hsl(280 85% 65% / 0.4);
+    --shadow-glass: 0 8px 32px 0 hsl(0 0% 0% / 0.5);
+    
+    /* Syntax highlighting tokens */
+    --syntax-keyword: 280 85% 70%;
+    --syntax-string: 140 60% 65%;
+    --syntax-number: 30 95% 65%;
+    --syntax-comment: 0 0% 50%;
+    --syntax-function: 180 75% 60%;
+    --syntax-type: 200 80% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background: var(--gradient-bg);
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: var(--glass-background));
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-glass);
+  }
+  
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-accent {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .btn-glow:hover {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  /* Syntax highlighting */
+  .syntax-keyword {
+    color: hsl(var(--syntax-keyword));
+    font-weight: 500;
+  }
+  
+  .syntax-string {
+    color: hsl(var(--syntax-string));
+  }
+  
+  .syntax-number {
+    color: hsl(var(--syntax-number));
+  }
+  
+  .syntax-comment {
+    color: hsl(var(--syntax-comment));
+    font-style: italic;
+  }
+  
+  .syntax-function {
+    color: hsl(var(--syntax-function));
+    font-weight: 500;
+  }
+  
+  .syntax-type {
+    color: hsl(var(--syntax-type));
+    font-weight: 500;
+  }
+}
