@@ -8,10 +8,12 @@ FP concepts while still being imparative.
 
 ## Features
 - [ ] References
-- [ ] No `do` block/Monads
-- [ ] Function currying
-- [ ] Structural typing
+- [X] No `do` block/Monads
+- [X] Function currying
+- [X] Structural typing (WIP)
 - [ ] Modules (Golang inspired)
+- [ ] Proper error messages
+- [ ] Formatter/Pretty printer (WIP)
 - [ ] Include files
 - [ ] Pattern matching
 - [ ] Typed external functions
@@ -38,7 +40,10 @@ let main =
 
 ## Reference Projects
 [Reason ML](https://reasonml.github.io/en/)
+
 [Ocaml](https://ocaml.org/)
+
 [Sml](https://smlfamily.github.io/)
+
 [F#](https://fsharp.org/)
 
