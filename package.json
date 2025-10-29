@@ -1,5 +1,5 @@
 {
-  "name": "roy",
+  "name": "royml",
   "description": "Small functional language that compiles to JavaScript",
   "keywords": [
     "javascript",
@@ -7,8 +7,8 @@
     "roy",
     "compiler"
   ],
-  "author": "Brian McKenna <brian@brianmckenna.org> (http://brianmckenna.org/)",
-  "version": "0.2.2",
+  "author": "Solaris Studio (studio.solaris@gmail.com)",
+  "version": "0.1.0",
   "engines": {
     "node": ">=0.4.0"
   },
@@ -20,7 +20,7 @@
     "prepublish": "node_modules/.bin/grunt jison",
     "test": "node_modules/.bin/grunt jison lint jasmine"
   },
-  "homepage": "http://roy.brianmckenna.org/",
+  "homepage": "https://todo.com",
   "dependencies": {
     "escodegen": "0.0.22",
     "source-map": "0.1.8",
