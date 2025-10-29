@@ -900,7 +900,7 @@ var compile = function(source, env, aliases, opts) {
     var ast = parser.parse(tokens);
 
     // Typecheck the AST. Any type errors will throw an exception.
-    var resultType = typecheck(ast.body, env, aliases);
+    var resultType = typecheck(ast.body, env, aliases, opts);
 
     // Export types
     ast.body = _.map(ast.body, function(n) {
