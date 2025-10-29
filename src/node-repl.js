@@ -22,9 +22,13 @@ var getFileContents = function(filename) {
         filenames,
         foundFilename;
 
+    if (filename.match(/\.rml$/) == null) {
+        throw new Error("Expected a file with `.rml` extension but found `" + filename + "`");
+    }
+
     filenames = /\..+$/.test(filename) ? // if an extension is specified,
                 [filename] :             // don't bother checking others
-                _.map(["", ".roy", ".lroy"], function(ext){
+                _.map(["", ".rml"], function(ext){
                     return filename + ext;
                 });
 
@@ -216,8 +220,7 @@ var runRoy = function(argv, opts) {
     var path = require('path');
     var vm = require('vm');
 
-    var extensions = /\.l?roy$/;
-    var literateExtension = /\.lroy$/;
+    var extensions = /\.rml$/;
 
     var exported;
     var env = {};
@@ -245,14 +248,9 @@ var runRoy = function(argv, opts) {
 
     _.each(argv, function(filename) {
         // Read the file content.
-        var source = getFileContents(filename);
 
-        if(filename.match(literateExtension)) {
-            // Strip out the Markdown.
-            source = source.match(/^ {4,}.+$/mg).join('\n').replace(/^ {4}/gm, '');
-        } else {
-            console.assert(filename.match(extensions), 'Filename must end with ".roy" or ".lroy"');
-        }
+
+        var source = getFileContents(filename);
 
         exported = {};
         var outputPath = filename.replace(extensions, '.js');
