@@ -12,6 +12,9 @@ var t = require('./types'),
     getFreeVariables = require('./freeVariables').getFreeVariables,
     stronglyConnectedComponents = require('./tarjan').stronglyConnectedComponents;
 
+var errors = require("./errors.js");
+
+var currentFile = null;
 // ### Unification
 //
 // This is the process of finding a type that satisfies some given constraints.
@@ -67,78 +70,78 @@ var unify = function (t1, t2, lineno) {
     }
 };
 
-var flattenFunctionType = function(argTypes, resultType) {  
-    var types = argTypes.slice(); 
-      
-    var currentType = resultType;  
-    while (t.prune(currentType) instanceof t.FunctionType) {  
-        var prunedType = t.prune(currentType);  
-        for (var i = 0; i < prunedType.types.length - 1; i++) {  
-            types.push(prunedType.types[i]);  
-        }  
-        currentType = prunedType.types[prunedType.types.length - 1];  
-    }  
-    types.push(currentType);  
-      
-    return new t.FunctionType(types);  
-};  
+var flattenFunctionType = function (argTypes, resultType) {
+    var types = argTypes.slice();
+
+    var currentType = resultType;
+    while (t.prune(currentType) instanceof t.FunctionType) {
+        var prunedType = t.prune(currentType);
+        for (var i = 0; i < prunedType.types.length - 1; i++) {
+            types.push(prunedType.types[i]);
+        }
+        currentType = prunedType.types[prunedType.types.length - 1];
+    }
+    types.push(currentType);
+
+    return new t.FunctionType(types);
+};
 
 // ### Helper functions for function definitions
 //
 var analyseFunction = function (functionDecl, funcType, env, nonGeneric, aliases, constraints) {
-    var types = [];  
-    var newEnv = _.clone(env);  
-  
-    var argNames = {};  
-    _.each(functionDecl.args, function(arg, i) {  
-        if(argNames[arg.name]) {  
-            throw new Error("Repeated function argument '" + arg.name + "'");  
-        }  
-  
-        var argType;  
-        if(arg.type) {  
-            argType = nodeToType(arg.type, env, aliases);  
-        } else {  
-            argType = funcType.types[i];  
-        }  
-        newEnv[arg.name] = argType;  
-        argNames[arg.name] = argType;  
-        types.push(argType);  
-    });  
-  
-    analyseWhereDataDecls(functionDecl.whereDecls, newEnv, nonGeneric, aliases, constraints);  
-  
-    var whereFunctionTypeMap =  
-        analyseWhereFunctions(functionDecl.whereDecls, newEnv, nonGeneric, aliases, constraints);  
-  
-    for(var name in whereFunctionTypeMap) {  
-        newEnv[name] = whereFunctionTypeMap[name];  
-    }  
-  
-    var scopeTypes = _.map(withoutComments(functionDecl.body), function(expression) {  
-        return analyse(expression, newEnv, nonGeneric, aliases, constraints);  
-    });  
-  
-    var resultType = scopeTypes[scopeTypes.length - 1];  
-  
+    var types = [];
+    var newEnv = _.clone(env);
+
+    var argNames = {};
+    _.each(functionDecl.args, function (arg, i) {
+        if (argNames[arg.name]) {
+            errors.reportError(currentFile, functionDecl.lineno, "Repeated function argument '" + arg.name + "'");
+        }
+
+        var argType;
+        if (arg.type) {
+            argType = nodeToType(arg.type, env, aliases);
+        } else {
+            argType = funcType.types[i];
+        }
+        newEnv[arg.name] = argType;
+        argNames[arg.name] = argType;
+        types.push(argType);
+    });
+
+    analyseWhereDataDecls(functionDecl.whereDecls, newEnv, nonGeneric, aliases, constraints);
+
+    var whereFunctionTypeMap =
+        analyseWhereFunctions(functionDecl.whereDecls, newEnv, nonGeneric, aliases, constraints);
+
+    for (var name in whereFunctionTypeMap) {
+        newEnv[name] = whereFunctionTypeMap[name];
+    }
+
+    var scopeTypes = _.map(withoutComments(functionDecl.body), function (expression) {
+        return analyse(expression, newEnv, nonGeneric, aliases, constraints);
+    });
+
+    var resultType = scopeTypes[scopeTypes.length - 1];
+
     // Use helper to construct flattened function type  
-    var functionType = flattenFunctionType([], resultType);  
-  
-    var annotationType;  
-    if(functionDecl.type) {  
-        annotationType = nodeToType(functionDecl.type, env, aliases);  
-          
+    var functionType = flattenFunctionType([], resultType);
+
+    var annotationType;
+    if (functionDecl.type) {
+        annotationType = nodeToType(functionDecl.type, env, aliases);
+
         // Unwrap resultType to get the final return type  
-        var finalResultType = resultType;  
-        while (t.prune(finalResultType) instanceof t.FunctionType) {  
-            var prunedType = t.prune(finalResultType);  
-            finalResultType = prunedType.types[prunedType.types.length - 1];  
-        }  
-          
-        unify(finalResultType, annotationType, functionDecl.lineno);  
-    }  
-  
-    return functionType;  
+        var finalResultType = resultType;
+        while (t.prune(finalResultType) instanceof t.FunctionType) {
+            var prunedType = t.prune(finalResultType);
+            finalResultType = prunedType.types[prunedType.types.length - 1];
+        }
+
+        unify(finalResultType, annotationType, functionDecl.lineno);
+    }
+
+    return functionType;
 };
 
 var analyseWhereFunctions = function (whereDecls, env, nonGeneric, aliases, constraints) {
@@ -245,14 +248,14 @@ var analyseWhereDataDecls = function (whereDecls, env, nonGeneric, aliases, cons
         var types = [nameType];
 
         if (env[dataDecl.name]) {
-            throw new Error("Multiple declarations of type constructor: " + dataDecl.name);
+            errors.reportError(currentFile, dataDecl.lineno, "Multiple declarations of type constructor: " + dataDecl.name);
         }
 
         var argNames = {};
         var argEnv = _.clone(env);
         _.each(dataDecl.args, function (arg) {
             if (argNames[arg.name]) {
-                throw new Error("Repeated type variable '" + arg.name + "'");
+                errors.reportError(currentFile, dataDecl.lineno, "Repeated type variable '" + arg.name + "'");
             }
 
             var argType;
@@ -280,7 +283,7 @@ var analyseWhereDataDecls = function (whereDecls, env, nonGeneric, aliases, cons
 
         _.each(dataDecl.tags, function (tag) {
             if (env[tag.name]) {
-                throw new Error("Multiple declarations for data constructor: " + tag.name);
+                errors.reportError(currentFile, dataDecl.lineno, "Multiple declarations for data constructor: " + tag.name);
             }
 
             var tagTypes = [];
@@ -906,16 +909,22 @@ var solveTypeClassConstraint = function (constraint, env, unsolvedCallback) {
 };
 
 // Run inference on an array of AST nodes.
-var typecheck = function (ast, env, aliases) {
+var typecheck = function (ast, env, aliases, opts) {
+    currentFile = opts.filename;
     var types = _.map(ast, function (node) {
         var constraints = [];
-        var type = analyse(node, env, [], aliases, constraints);
-        _.each(constraints, function (constraint) {
-            solveTypeClassConstraint(constraint, env, function (instance) {
-                throw new Error("Couldn't find instance of: " + instance.toString());
+        try {
+
+            var type = analyse(node, env, [], aliases, constraints);
+            _.each(constraints, function (constraint) {
+                solveTypeClassConstraint(constraint, env, function (instance) {
+                    throw "Couldn't find instance of: " + instance.toString();
+                });
             });
-        });
-        return type;
+            return type;
+        } catch (e) {
+            errors.reportError(opts.filename, node.lineno, e);
+        }
     });
     return types && types[0];
 };
