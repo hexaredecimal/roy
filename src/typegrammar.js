@@ -1,5 +1,13 @@
 var bnf = {
     // For type annotations
+    "declTypes": [
+        ["FUNCTION ( optTypeFunctionArgList )", "$$ = new yy.TypeFunction($3);"],
+        ["GENERIC", "$$ = new yy.Generic($1);"],
+        ["[ type ]", "$$ = new yy.TypeArray($2);"],
+        ["( typeList )", "$$ = new yy.TypeObject($2);"],
+        ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"]
+    ],
+
     "type": [
         ["IDENTIFIER optTypeParamList", "$$ = new yy.TypeName($1, $2);"],
         ["FUNCTION ( optTypeFunctionArgList )", "$$ = new yy.TypeFunction($3);"],
@@ -8,6 +16,7 @@ var bnf = {
         ["( typeList )", "$$ = new yy.TypeObject($2);"],
         ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"]
     ],
+
     "typeList": [
         ["type", "$$ = [$1];"],
         ["typeList , type", "$$ = $1; $1.push($3);"]
@@ -48,7 +57,6 @@ var bnf = {
     "keywordOrIdentifier": [
         ["THEN", "$$ = $1;"],
         ["ELSE", "$$ = $1;"],
-        ["DATA", "$$ = $1;"],
         ["TYPE", "$$ = $1;"],
         ["MATCH", "$$ = $1;"],
         ["CASE", "$$ = $1;"],

@@ -46,7 +46,6 @@ var grammar = {
     "expression": [
       ["innerExpression", "$$ = $1;"],
       ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
-      ["LAMBDA paramList optType RIGHTARROW block", n("$$ = new yy.Function(undefined, $2, $5, $3);")],
       ["innerExpression MATCH caseList", n("$$ = new yy.Match($1, $3);")],
       ["ifThenElse", "$$ = $1;"]
     ],
@@ -86,26 +85,27 @@ var grammar = {
       ["patternIdentifiers identifier", "$$ = $1; $1.push($2);"]
     ],
     "ifThenElse": [
-      ["IF innerExpression THEN block ELSE block", n("$$ = new yy.IfThenElse($2, $4, $6);")],
       ["IF innerExpression THEN innerExpression ELSE innerExpression", n("$$ = new yy.IfThenElse($2, [$4], [$6]);")]
     ],
 
     // type Maybe a = Some a | None
     "dataDecl": [
-      ["TYPE IDENTIFIER optDataParamList = dataList", n("$$ = new yy.Data($2, $3, $5);")]
+      ["TYPE IDENTIFIER optDataParamList = dataOrAlias", n(
+        "$$ = Array.isArray($5) ? ($5.length == 1 ? new yy.TypeName($5[0].name, $5[0].vars): new yy.Data($2, $3, $5)) : new yy.Type($2, $5, $3);"
+      )]
+    ],
+    "dataOrAlias": [
+      ["dataList", "$$ = $1"],
+      ["declTypes", "$$ = $1"]
     ],
     "dataList": [
       ["IDENTIFIER optTypeParamList", "$$ = [new yy.Tag($1, $2)];"],
       ["dataList | IDENTIFIER optTypeParamList", "$$ = $1; $1.push(new yy.Tag($3, $4));"]
     ],
 
-    // type Person = {firstName: String, lastName: String}
-    "typeDecl": [
-      ["TYPE IDENTIFIER = type", n("$$ = new yy.Type($2, $4);")]
-    ],
-
     // For type annotations (from the typegrammar module)
     "type": typegrammar.type,
+    "declTypes": typegrammar.declTypes,
     "typeList": typegrammar.typeList,
     "optTypeParamList": typegrammar.optTypeParamList,
     "typeParamList": typegrammar.typeParamList,
