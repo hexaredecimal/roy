@@ -14,41 +14,41 @@ var typecheck = require('./typeinference').typecheck,
 // the `yy` namespace.
 parser.yy = typeparser.yy = nodes;
 
-parser.lexer = typeparser.lexer =  {
-    "lex": function() {
+parser.lexer = typeparser.lexer = {
+    "lex": function () {
         var token = this.tokens[this.pos] ? this.tokens[this.pos++] : ['EOF'];
         this.yytext = token[1];
         this.yylineno = token[2];
         return token[0];
     },
-    "setInput": function(tokens) {
+    "setInput": function (tokens) {
         this.tokens = tokens;
         this.pos = 0;
     },
-    "upcomingInput": function() {
+    "upcomingInput": function () {
         return "";
     }
 };
 
 
 parser.parseError = function (str, hash) {
-  var errors = require("./errors.js");
-  var filename = this.yy.filename || "stdin";
-  var line = hash.line;
-  var token = hash.token;
-  var message = "Encountered unexpected token: `" + token + "`";
-  errors.reportError(filename, line, message);
+    var errors = require("./errors.js");
+    var filename = this.yy.filename || "stdin";
+    var line = hash.line;
+    var token = hash.token;
+    var message = "Encountered unexpected token: `" + token + "`";
+    errors.reportError(filename, line, message);
 };
 
 
 
 
 var jsNodeIsExpression = function (node) {
-    return !! (/Expression$/.test(node.type) || node.type === 'Identifier' || node.type === 'Literal');
+    return !!(/Expression$/.test(node.type) || node.type === 'Identifier' || node.type === 'Literal');
 };
 
 var jsNodeIsStatement = function (node) {
-    return !! (/Statement$/.test(node.type) || /Declaration$/.test(node.type));
+    return !!(/Statement$/.test(node.type) || /Declaration$/.test(node.type));
 };
 
 var ensureJsASTStatement = function (node) {
@@ -73,10 +73,10 @@ var ensureJsASTStatements = function (nodes) {
 };
 
 // Separate end comments from other expressions
-var splitComments = function(body) {
-    return _.reduceRight(body, function(accum, node) {
-        if(accum.length && node instanceof nodes.Comment) {
-            if (! accum[0].comments) {
+var splitComments = function (body) {
+    return _.reduceRight(body, function (accum, node) {
+        if (accum.length && node instanceof nodes.Comment) {
+            if (!accum[0].comments) {
                 accum[0].comments = [];
             }
             accum[0].comments.unshift(node);
@@ -90,7 +90,7 @@ var splitComments = function(body) {
 var liftComments = function (jsAst) {
     var helper = function (node) {
         var result, i, comments = [];
-        if (! (node && node.type)) {
+        if (!(node && node.type)) {
             // Break out early when we're not looking at a proper node
             return [node, comments];
         }
@@ -127,14 +127,14 @@ var liftComments = function (jsAst) {
 
 var extraComments = [];
 
-var compileNodeWithEnvToJsAST = function(n, env, opts) {
-    if(!opts) opts = {};
-    var compileNode = function(n) {
+var compileNodeWithEnvToJsAST = function (n, env, opts) {
+    if (!opts) opts = {};
+    var compileNode = function (n) {
         return compileNodeWithEnvToJsAST(n, env);
     };
     var result = n.accept({
         // Top level file
-        visitModule: function() {
+        visitModule: function () {
             var nodes = _.map(splitComments(n.body), compileNode);
             return {
                 type: "Program",
@@ -142,7 +142,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             };
         },
         // Function definition to JavaScript function.
-        visitFunction: function() {
+        visitFunction: function () {
             var body = {
                 type: "BlockStatement",
                 body: []
@@ -169,7 +169,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }),
                 body: body
             };
-            if (! n.name) {
+            if (!n.name) {
                 return func;
             }
             return {
@@ -185,7 +185,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }]
             };
         },
-        visitIfThenElse: function() {
+        visitIfThenElse: function () {
             var ifTrue = _.map(splitComments(n.ifTrue), compileNode);
             if (ifTrue.length === 1) {
                 ifTrue = ifTrue[0];
@@ -240,7 +240,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             };
         },
         // Let binding to JavaScript variable.
-        visitLet: function() {
+        visitLet: function () {
             return {
                 type: "VariableDeclaration",
                 kind: "var",
@@ -254,7 +254,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }]
             };
         },
-        visitInstance: function() {
+        visitInstance: function () {
             return {
                 type: "VariableDeclaration",
                 kind: "var",
@@ -268,7 +268,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }]
             };
         },
-        visitAssignment: function() {
+        visitAssignment: function () {
             return {
                 type: "AssignmentExpression",
                 operator: "=",
@@ -276,14 +276,14 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 right: compileNode(n.value)
             };
         },
-        visitData: function() {
+        visitData: function () {
             return {
                 type: "VariableDeclaration",
                 kind: "var",
                 declarations: _.map(n.tags, compileNode)
             };
         },
-        visitReturn: function() {
+        visitReturn: function () {
             return {
                 type: "CallExpression",
                 callee: {
@@ -301,7 +301,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 "arguments": [compileNode(n.value)]
             };
         },
-        visitBind: function() {
+        visitBind: function () {
             var body = _.map(n.rest.slice(0, n.rest.length - 1), compileNode);
             body.push({
                 type: "ReturnStatement",
@@ -335,14 +335,14 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }]
             };
         },
-        visitDo: function() {
+        visitDo: function () {
             var compiledInit = [];
             var firstBind;
             var lastBind;
             var lastBindIndex = 0;
-            _.each(n.body, function(node, i) {
-                if(node instanceof nodes.Bind) {
-                    if(!lastBind) {
+            _.each(n.body, function (node, i) {
+                if (node instanceof nodes.Bind) {
+                    if (!lastBind) {
                         firstBind = node;
                     } else {
                         lastBind.rest = n.body.slice(lastBindIndex + 1, i + 1);
@@ -350,12 +350,12 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                     lastBindIndex = i;
                     lastBind = node;
                 } else {
-                    if(!lastBind) {
+                    if (!lastBind) {
                         compiledInit.push(compileNode(node));
                     }
                 }
             });
-            if(lastBind) {
+            if (lastBind) {
                 lastBind.rest = n.body.slice(lastBindIndex + 1);
             }
             var monadDecl = {
@@ -389,18 +389,18 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }
             };
         },
-        visitTag: function() {
+        visitTag: function () {
             var tagName = {
                 type: "Identifier",
                 name: n.name
             };
-            var args = _.map(n.vars, function(v, i) {
+            var args = _.map(n.vars, function (v, i) {
                 return {
                     type: "Identifier",
                     name: v.value + "_" + i
                 };
             });
-            var setters = _.map(args, function(v, i) {
+            var setters = _.map(args, function (v, i) {
                 return { // "this._" + i + " = " + v;
                     type: "ExpressionStatement",
                     expression: {
@@ -462,24 +462,24 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 }
             };
         },
-        visitMatch: function() {
+        visitMatch: function () {
             var valuePlaceholder = '__match';
-            var flatMap = function(a, f) {
+            var flatMap = function (a, f) {
                 return _.flatten(_.map(a, f));
             };
 
-            var pathConditions = _.map(n.cases, function(c) {
-                var getVars = function(pattern, varPath) {
-                    var decls = flatMap(pattern.vars, function(a, i) {
+            var pathConditions = _.map(n.cases, function (c) {
+                var getVars = function (pattern, varPath) {
+                    var decls = flatMap(pattern.vars, function (a, i) {
                         var nextVarPath = varPath.slice();
                         nextVarPath.push(i);
 
                         return a.accept({
-                            visitIdentifier: function() {
+                            visitIdentifier: function () {
 
-                                if(a.value == '_') return [];
+                                if (a.value == '_') return [];
 
-                                var value = _.reduceRight(nextVarPath, function(structure, varPathName) {
+                                var value = _.reduceRight(nextVarPath, function (structure, varPathName) {
                                     return {
                                         type: "MemberExpression",
                                         computed: false,
@@ -493,7 +493,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                                     init: value
                                 }];
                             },
-                            visitPattern: function() {
+                            visitPattern: function () {
                                 return getVars(a, nextVarPath).declarations;
                             }
                         });
@@ -508,18 +508,18 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 };
                 var vars = getVars(c.pattern, []);
 
-                var getTagPaths = function(pattern, patternPath) {
-                    return flatMap(pattern.vars, function(a, i) {
+                var getTagPaths = function (pattern, patternPath) {
+                    return flatMap(pattern.vars, function (a, i) {
                         var nextPatternPath = patternPath.slice();
 
                         nextPatternPath.push(i);
                         return a.accept({
-                            visitIdentifier: function() {
+                            visitIdentifier: function () {
                                 return [];
                             },
-                            visitPattern: function() {
+                            visitPattern: function () {
                                 var inner = getTagPaths(a, nextPatternPath);
-                                inner.unshift({path: nextPatternPath, tag: a.tag});
+                                inner.unshift({ path: nextPatternPath, tag: a.tag });
                                 return inner;
                             }
                         });
@@ -545,7 +545,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 var extraConditions = null;
                 if (tagPaths.length) {
                     var lastCondition = makeCondition(tagPaths.pop());
-                    extraConditions = _.reduceRight(tagPaths, function(conditions, e) {
+                    extraConditions = _.reduceRight(tagPaths, function (conditions, e) {
                         return {
                             type: "LogicalExpression",
                             operator: "&&",
@@ -557,7 +557,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
 
                 // More specific patterns need to appear first
                 // Need to sort by the length of the path
-                var maxTagPath = _.max(tagPaths, function(t) {
+                var maxTagPath = _.max(tagPaths, function (t) {
                     return t.path.length;
                 });
                 var maxPath = maxTagPath === -Infinity ? [] : maxTagPath.path;
@@ -598,9 +598,9 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 };
             });
 
-            var cases = _.map(_.sortBy(pathConditions, function(t) {
+            var cases = _.map(_.sortBy(pathConditions, function (t) {
                 return -t.path.length;
-            }), function(e) {
+            }), function (e) {
                 return e.condition;
             });
 
@@ -619,7 +619,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             };
         },
         // Call to JavaScript call.
-        visitCall: function() {
+        visitCall: function () {
             var args = _.map(n.args, compileNode);
             if (n.typeClassInstance) {
                 args.unshift({
@@ -628,16 +628,19 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 });
             }
 
-            return {
-                type: "CallExpression",
-                "arguments": args,
-                callee: compileNode(n.func)
-            };
-            // if(n.func.value == 'import') {
-            //     return importModule(JSON.parse(n.args[0].value), env, opts);
-            // }
+            var result = compileNode(n.func);
+
+            _.each(args, function (arg) {
+                result = {
+                    type: "CallExpression",
+                    "arguments": [arg],
+                    callee: result
+                };
+            });
+
+            return result;
         },
-        visitPropertyAccess: function() {
+        visitPropertyAccess: function () {
             return {
                 type: "MemberExpression",
                 computed: false,
@@ -645,7 +648,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 property: { type: "Identifier", name: n.property }
             };
         },
-        visitAccess: function() {
+        visitAccess: function () {
             return {
                 type: "MemberExpression",
                 computed: true,
@@ -653,14 +656,14 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 property: compileNode(n.property)
             };
         },
-        visitUnaryBooleanOperator: function() {
+        visitUnaryBooleanOperator: function () {
             return {
                 type: "UnaryExpression",
                 operator: n.name,
                 argument: compileNode(n.value)
             };
         },
-        visitBinaryGenericOperator: function() {
+        visitBinaryGenericOperator: function () {
             return {
                 type: "BinaryExpression",
                 operator: n.name,
@@ -668,7 +671,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 right: compileNode(n.right)
             };
         },
-        visitBinaryNumberOperator: function() {
+        visitBinaryNumberOperator: function () {
             return {
                 type: "BinaryExpression",
                 operator: n.name,
@@ -676,7 +679,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 right: compileNode(n.right)
             };
         },
-        visitBinaryBooleanOperator: function() {
+        visitBinaryBooleanOperator: function () {
             return {
                 type: "BinaryExpression",
                 operator: n.name,
@@ -684,7 +687,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 right: compileNode(n.right)
             };
         },
-        visitBinaryStringOperator: function() {
+        visitBinaryStringOperator: function () {
             return {
                 type: "BinaryExpression",
                 operator: n.name,
@@ -692,7 +695,7 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 right: compileNode(n.right)
             };
         },
-        visitWith: function() {
+        visitWith: function () {
             var copyLoop = function (varName) {
                 return {
                     type: "ForInStatement",
@@ -758,8 +761,8 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             };
         },
         // Print all other nodes directly.
-        visitIdentifier: function() {
-            if(n.typeClassInstance) {
+        visitIdentifier: function () {
+            if (n.typeClassInstance) {
                 return {
                     type: "MemberExpression",
                     computed: false,
@@ -778,49 +781,49 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
                 name: n.value
             };
         },
-        visitNumber: function() {
+        visitNumber: function () {
             return {
                 type: "Literal",
                 value: parseFloat(n.value)
             };
         },
-        visitString: function() {
+        visitString: function () {
             /*jshint evil: true */
             return {
                 type: "Literal",
                 value: eval(n.value)
             };
         },
-        visitBoolean: function() {
+        visitBoolean: function () {
             return {
                 type: "Literal",
                 value: n.value === "true"
             };
         },
-        visitUnit: function() {
+        visitUnit: function () {
             return {
                 type: "Literal",
                 value: null
             };
         },
-        visitArray: function() {
+        visitArray: function () {
             return {
                 type: "ArrayExpression",
                 elements: _.map(n.values, compileNode)
             };
         },
-        visitTuple: function() {
+        visitTuple: function () {
             return {
                 type: "ArrayExpression",
                 elements: _.map(n.values, compileNode)
             };
         },
-        visitObject: function() {
+        visitObject: function () {
             var cleanedKey, key, pairs = [];
 
-            for(key in n.values) {
+            for (key in n.values) {
                 if (key[0] === "'" || key[0] === '"') {
-                    cleanedKey = String.prototype.slice.call(key, 1, key.length-1);
+                    cleanedKey = String.prototype.slice.call(key, 1, key.length - 1);
                 } else {
                     cleanedKey = key;
                 }
@@ -839,33 +842,33 @@ var compileNodeWithEnvToJsAST = function(n, env, opts) {
             };
         }
     });
-    if (typeof result === "undefined"){
+    if (typeof result === "undefined") {
         if (n.comments && n.comments.length) {
             extraComments = extraComments.concat(n.comments);
         }
     } else {
-	    if (extraComments && extraComments.length) {
-		    if (! (n.comments && n.comments.length)) {
-			    n.comments = extraComments;
-		    } else {
-			    n.comments = extraComments.concat(n.comments);
-		    }
-		    extraComments = [];
-	    }
-	    result.leadingComments = _.map(n.comments, function (c) {
-		    if (c.value.startsWith('/*')) {
-			    var inner = c.value.slice(2, -2);
-			    return {
-				    type: "Block",
-				    value: inner  
-			    };
-		    } else {
-			    return {
-				    type: "Line",
-				    value: c.value.slice(2).trim()
-			    };
-		    }
-	    });
+        if (extraComments && extraComments.length) {
+            if (!(n.comments && n.comments.length)) {
+                n.comments = extraComments;
+            } else {
+                n.comments = extraComments.concat(n.comments);
+            }
+            extraComments = [];
+        }
+        result.leadingComments = _.map(n.comments, function (c) {
+            if (c.value.startsWith('/*')) {
+                var inner = c.value.slice(2, -2);
+                return {
+                    type: "Block",
+                    value: inner
+                };
+            } else {
+                return {
+                    type: "Line",
+                    value: c.value.slice(2).trim()
+                };
+            }
+        });
     }
     return result;
 };
@@ -873,38 +876,38 @@ exports.compileNodeWithEnvToJsAST = compileNodeWithEnvToJsAST;
 var compileNodeWithEnv = function (n, env, opts) {
     var ast = compileNodeWithEnvToJsAST(n, env, opts);
     if (typeof ast === "string") {
-//        console.warn("Got AST already transformed into string: ", ast);
+        //        console.warn("Got AST already transformed into string: ", ast);
         return ast;
     } else if (typeof ast === "undefined") {
         return "";
     } else {
         ast = liftComments(ast);
-        var generated = escodegen.generate(ensureJsASTStatement(ast), {comment: true});
+        var generated = escodegen.generate(ensureJsASTStatement(ast), { comment: true });
         return generated;
     }
 };
 exports.compileNodeWithEnv = compileNodeWithEnv;
 
-var compile = function(source, env, aliases, opts) {
-    if(!env) env = {};
-    if(!aliases) aliases = {};
-    if(!opts) opts = {};
+var compile = function (source, env, aliases, opts) {
+    if (!env) env = {};
+    if (!aliases) aliases = {};
+    if (!opts) opts = {};
 
-    if(!opts.exported) opts.exported = {};
+    if (!opts.exported) opts.exported = {};
 
     parser.yy.filename = opts.filename || "stdin";
     env.filename = parser.yy.filename;
 
     // Parse the file to an AST.
-    var tokens = lexer.tokenise(source, {filename: opts.filename});
+    var tokens = lexer.tokenise(source, { filename: opts.filename });
     var ast = parser.parse(tokens);
 
     // Typecheck the AST. Any type errors will throw an exception.
     var resultType = typecheck(ast.body, env, aliases, opts);
 
     // Export types
-    ast.body = _.map(ast.body, function(n) {
-        if(n instanceof nodes.Call && n.func.value == 'export') {
+    ast.body = _.map(ast.body, function (n) {
+        if (n instanceof nodes.Call && n.func.value == 'export') {
             return exportType(n.args[0], env, opts.exported, opts.nodejs);
         }
         return n;
