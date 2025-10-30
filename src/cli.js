@@ -7,7 +7,7 @@ const appConfig = {
     description: "Functional language compiling to JS. Proud fork of Roy",
     commands: {
         build: {
-            description: 'Build the project/file',
+            description: 'Build the projectfile',
             subcommands: {
                 exe: { description: 'Build a native executable' },
                 stdout: { description: 'Dump the built sources to stdout' },
