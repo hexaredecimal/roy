@@ -116,7 +116,7 @@ var nodeRepl = function (opts) {
                 joined = block.join('\n');
 
                 inBlock = false;
-                repl.setPrompt('λ ');
+                repl.setPrompt('> ');
                 block = [];
 
                 // Remember the source if it's a binding
