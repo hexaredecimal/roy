@@ -11,6 +11,7 @@ FP concepts while still being imparative.
 - [X] No `do` block/Monads
 - [X] Function currying
 - [X] Structural typing (WIP)
+- [X] Cli Improvements
 - [ ] Modules (Golang inspired)
 - [ ] Proper error messages
 - [ ] Formatter/Pretty printer (WIP)
@@ -20,6 +21,7 @@ FP concepts while still being imparative.
 - [ ] Operator overloading
 - [ ] Mutability/References
 - [ ] Custom stdlib (With few external functions)
+- [ ] Build binaries (Using QuickJS as the runtime)
 
 ## What I aim to achieve
 ```ocaml
