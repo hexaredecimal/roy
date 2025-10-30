@@ -124,8 +124,7 @@ var analyseFunction = function (functionDecl, funcType, env, nonGeneric, aliases
 
     var resultType = scopeTypes[scopeTypes.length - 1];
 
-    // Use helper to construct flattened function type  
-    var functionType = flattenFunctionType([], resultType);
+    var functionType = flattenFunctionType(types, resultType);
 
     var annotationType;
     if (functionDecl.type) {
@@ -442,9 +441,30 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 return funType;
             }
 
+            if (funType instanceof t.FunctionType) {
+                var expectedArgCount = funType.types.length - 1; // Last element is return type  
+                var providedArgCount = types.length;
+
+                // Unify provided arguments with expected parameter types  
+                for (var i = 0; i < providedArgCount; i++) {
+                    if (i >= expectedArgCount) {
+                        throw new Error("Too many arguments provided on line " + node.lineno);
+                    }
+                    unify(types[i], funType.types[i], node.lineno);
+                }
+
+                if (providedArgCount < expectedArgCount) {
+                    var remainingTypes = funType.types.slice(providedArgCount);
+                    return new t.FunctionType(remainingTypes);
+                }
+
+                return funType.types[funType.types.length - 1];
+            }
+
             var resultType = new t.Variable();
             types.push(resultType);
             unify(new t.FunctionType(types), funType, node.lineno);
+
 
             return resultType;
         },
