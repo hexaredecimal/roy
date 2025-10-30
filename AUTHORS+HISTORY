@@ -3,11 +3,11 @@
 │2025-Present├ RoyML                                                                │
 │      ╭──────────────────────────────────────────────────────────────────────╮     │
 │      │ Repo: https://github.com/hexaredecimal/royml                         │     │
-├──────┤ Stars: 2 							      │─────╯
-│      │ Author: puffnfresh   					       	      │
+├──────┤ Stars: 2                                                             │─────╯
+│      │ Author: puffnfresh                                                   │
 │      │ Description: An experimental FP language inspiled by the ML Family   │
 │      │              of Programming languages.                               │
-│      │ Status: Archived       					      │
+│      │ Status: Archived                                                     │
 │      ╰──────────────────────────────────────────────────────────────────────╯
 │
 │
@@ -26,12 +26,12 @@
 ╭───────────────────────────────────────────────────────────────────────────────────╮                              
 │2011-2017├ Roy                                                                     │
 │      ╭──────────────────────────────────────────────────────────────────────╮     │
-│      │ Repo: https://github.com/puffnfresh/roy 			      │     │
-├──────┤ Stars: 841 							      │─────╯
+│      │ Repo: https://github.com/puffnfresh/roy                              │     │
+├──────┤ Stars: 841                                                           │─────╯
 │      │ Author: Brian McKenna                                                │
 │      │ Description: Roy is a small functional language that compiles to     │
-│      │              JavaScript 					      │
-│      │ Status: Archived       					      │
+│      │              JavaScript                                              │
+│      │ Status: Archived                                                     │
 │      ╰──────────────────────────────────────────────────────────────────────╯
 │
 ╰─ afcowie                                                                                    
