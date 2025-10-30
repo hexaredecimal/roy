@@ -914,24 +914,6 @@ var compile = function (source, env, aliases, opts) {
     });
 
     var jsAst = liftComments(compileNodeWithEnvToJsAST(ast, env, opts));
-    if (!opts.nodejs) {
-        jsAst.body = [{
-            type: "ExpressionStatement",
-            expression: {
-                type: "CallExpression",
-                'arguments': [],
-                callee: {
-                    type: "FunctionExpression",
-                    id: null,
-                    params: [],
-                    body: {
-                        type: "BlockStatement",
-                        body: jsAst.body
-                    }
-                }
-            }
-        }];
-    }
 
     if (opts.strict) {
         jsAst.body.unshift({
