@@ -4,7 +4,7 @@
 I forked the "Roy" project because the original dev gave up and I would like to use it
 as a hands on learning tool for learning type inference and structural typing.
 I also would like to use it to learn how does a language like ocaml combine 
-FP concepts while still being imparative.
+imperative concepts (Such as loops and references) while still being a functional language.
 
 ## Features
 - [ ] References
