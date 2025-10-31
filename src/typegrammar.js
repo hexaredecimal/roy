@@ -1,20 +1,20 @@
 var bnf = {
     // For type annotations
     "declTypes": [
-        ["FUNCTION ( optTypeFunctionArgList )", "$$ = new yy.TypeFunction($3);"],
         ["GENERIC", "$$ = new yy.Generic($1);"],
         ["[ type ]", "$$ = new yy.TypeArray($2);"],
         ["( typeList )", "$$ = new yy.TypeObject($2);"],
-        ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"]
+        ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"],
+        ["type RIGHTARROW type", "$$ = ($3 instanceof yy.TypeFunction) ? new yy.TypeFunction([$1].concat($3.args)) : new yy.TypeFunction([$1, $3]);"]
     ],
 
     "type": [
         ["IDENTIFIER optTypeParamList", "$$ = new yy.TypeName($1, $2);"],
-        ["FUNCTION ( optTypeFunctionArgList )", "$$ = new yy.TypeFunction($3);"],
         ["GENERIC", "$$ = new yy.Generic($1);"],
         ["[ type ]", "$$ = new yy.TypeArray($2);"],
         ["( typeList )", "$$ = new yy.TypeObject($2);"],
-        ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"]
+        ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"],
+        ["type RIGHTARROW type", "$$ = ($3 instanceof yy.TypeFunction) ? new yy.TypeFunction([$1].concat($3.args)) : new yy.TypeFunction([$1, $3]);"]
     ],
 
     "typeList": [
