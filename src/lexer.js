@@ -14,17 +14,16 @@ var IDENTIFIER = new RegExp(
 );
 
 var NUMBER = /^-?[0-9]+(\.[0-9]+)?([eE][\-\+]?[0-9]+)?/;
-var STRING = /^(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/;
+var STRING = /^"(?:[^"\\]|\\[\s\S])*"/;
 var WHITESPACE = /^[^\n\S]+/;
 var INDENT = /^(?:\n[^\n\S]*)+/;
-var GENERIC = /^#([a-z]+)/;
+var GENERIC = /^'([a-z]+)/;
 var SHEBANG = /^#!.*/;
 var COMMENT = /^\/\/.*|^\/\*[\s\S]*?\*\//;
 
 var keywordTokens = {
     'true':      'BOOLEAN',
     'false':     'BOOLEAN',
-    'Function':  'FUNCTION',
     'let':       'LET',
     'fn':        'FN',
     'if':        'IF',
@@ -72,7 +71,7 @@ var numberToken = function(chunk) {
 var stringToken = function(chunk) {
   var token = STRING.exec(chunk);
   if (token) {
-    tokens.push(['STRING', token[0].replaceAll("'", "`"), lineno]);
+    tokens.push(['STRING', token[0].replaceAll("\"", "`"), lineno]);
     return token[0].length;
 
   }
