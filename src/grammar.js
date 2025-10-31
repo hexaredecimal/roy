@@ -191,8 +191,10 @@ var grammar = {
       ["keyPairs", "$$ = $1;"]
     ],
     "keyPairs": [
-      ["keywordOrIdentifier : expression", "$$ = {}; $$[$1] = $3;"],
-      ["keyPairs , keywordOrIdentifier : expression", "$$ = $1; $1[$3] = $5;"]
+      ["keywordOrIdentifier : expression", "$$ = {}; $$[$1] = $3;"],  
+      ["keywordOrIdentifier", "$$ = {}; $$[$1] = new yy.Identifier($1);"], 
+      ["keyPairs , keywordOrIdentifier : expression", "$$ = $1; $1[$3] = $5;"],  
+      ["keyPairs , keywordOrIdentifier", "$$ = $1; $1[$3] = new yy.Identifier($3);"] 
     ],
     "accessor": [
       ["IDENTIFIER", n("$$ = new yy.Identifier($1);")],
