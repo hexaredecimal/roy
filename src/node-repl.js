@@ -169,7 +169,7 @@ var writeModule = function (env, exported, filename) {
 
     var moduleOutput = _.map(exported, function (v, k) {
         if (v instanceof types.TagType) {
-            return 'type ' + v.toString().replace(/#/g, '');
+            return 'type ' + v.toString();
         }
         return k + ': ' + v.toString();
     }).join('\n') + '\n';
