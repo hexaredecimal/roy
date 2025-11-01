@@ -1,10 +1,6 @@
 
-// Won't compile:
-// console.log "40" + 2
-
 // Explicit
 let f x: Number = x
-
 
 // Won't compile:
 // console.log (f "100")

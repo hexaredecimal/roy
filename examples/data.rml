@@ -1,5 +1,4 @@
-type Maybe a =
-  Some a | None
+type Maybe 'a = Some 'a | None
 
 let none = None ()
 
@@ -10,8 +9,7 @@ let printSomething m = match m
 printSomething (Some 1)
 printSomething none
 
-type Either a b =
-  Left a | Right b
+type Either 'a 'b = Left 'a | Right 'b
 
 let printString (s: String) =
   console.log s
@@ -35,7 +33,7 @@ let getBool b ifTrue ifFalse = match b
 console.log (getBool (True ()) 1 2)
 console.log (getBool (False ()) 1 2)
 
-type MyList a = Empty | Many a (MyList a)
+type MyList 'a = Empty | Many 'a (MyList 'a)
 
 let empty = Empty ()
 console.log (Many true (Many true empty))

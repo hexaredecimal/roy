@@ -1,4 +1,4 @@
-type Option a = Some a | None
+type Option 'a = Some 'a | None
 
 let unwrap option = 
   when option
