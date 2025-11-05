@@ -37,12 +37,17 @@ let main =
   
 ```
 
+
 ## References and study material
 [Archived Roy](https://github.com/puffnfresh/roy) - This repository was archived by the owner on Nov 23, 2017. It is now read-only.
 
 [Imperative to Functional Programming Succinctly](https://www.syncfusion.com/succinctly-free-ebooks/imperative)
 
 [Functional Programming in OCaml](https://www.ps.uni-saarland.de/~smolka/drafts/prog2021.pdf)
+
+[Learning F# by Designing Your Own Language by Oleksii Holub | JetBrains](http://youtube.com/watch?v=34C_7halqGw)
+
+<a href="https://deepwiki.com/hexaredecimal/royml"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 
 ## Reference Projects
 [Reason ML](https://reasonml.github.io/en/)
