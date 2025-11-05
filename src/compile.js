@@ -16,9 +16,14 @@ parser.yy = typeparser.yy = nodes;
 
 parser.lexer = typeparser.lexer = {
     "lex": function () {
-        var token = this.tokens[this.pos] ? this.tokens[this.pos++] : ['EOF'];
+        var token = this.tokens[this.pos] ? this.tokens[this.pos] : ['EOF'];
         this.yytext = token[1];
-        this.yylineno = token[2];
+        this.yylineno =  token[2];
+        this.yycolumn = token[3];
+        if (token[0] != 'EOF' && this.pos - 1 >= 0) {
+            this.yycolumn = this.tokens[this.pos - 1];
+        }
+        this.pos++;
         return token[0];
     },
     "setInput": function (tokens) {
@@ -35,9 +40,10 @@ parser.parseError = function (str, hash) {
     var errors = require("./errors.js");
     var filename = this.yy.filename || "stdin";
     var line = hash.line;
+    var column = this.lexer.yycolumn;
     var token = hash.token;
     var message = "Encountered unexpected token: `" + token + "`";
-    errors.reportError(filename, line, message);
+    errors.reportError(filename, line, message, column);
 };
 
 

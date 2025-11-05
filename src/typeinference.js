@@ -30,7 +30,7 @@ var currentFile = null;
 // In case #2, do a deep unification on the type, using recursion.
 //
 // If neither constraint can be met, the process will throw an error message.
-var unify = function (t1, t2, lineno) {
+var unify = function (t1, t2, node) {
     var alias = t1.aliased || t2.aliased;
     var i;
     t1 = t.prune(t1);
@@ -38,12 +38,12 @@ var unify = function (t1, t2, lineno) {
     if (t1 instanceof t.Variable) {
         if (t1 != t2) {
             if (t.occursInType(t1, t2)) {
-                throw "Recursive unification";
+                errors.reportError(node.filename, node.lineno, node.column, "Recursive unification");
             }
             t1.instance = t2;
         }
     } else if (t1 instanceof t.BaseType && t2 instanceof t.Variable) {
-        unify(t2, t1, lineno);
+        unify(t2, t1, node);
     } else if (t1 instanceof t.NativeType || t2 instanceof t.NativeType) {
         // do nothing.
         // coercing Native to any type.
@@ -51,22 +51,22 @@ var unify = function (t1, t2, lineno) {
         var t1str = t1.aliased || t1.toString();
         var t2str = t2.aliased || t2.toString();
         if (t1.name != t2.name || t1.types.length != t2.types.length) {
-            throw new Error("Type error on line " + lineno + ": " + t1str + " is not " + t2str);
+            errors.reportError(node.filename, node.lineno, node.column, "Type error: " + t1str + " is not " + t2str);
         }
         if (t1 instanceof t.ObjectType) {
             for (i in t2.props) {
                 if (!(i in t1.props)) {
-                    throw new Error("Type error on line " + lineno + ": " + t1str + " is not " + t2str);
+                    errors.reportError(node.filename, node.lineno, node.column, "Type error: " + + ": " + t1str + " is not " + t2str);
                 }
-                unify(t1.props[i], t2.props[i], lineno);
+                unify(t1.props[i], t2.props[i], node);
             }
         }
         for (i = 0; i < t1.types.length; i++) {
-            unify(t1.types[i], t2.types[i], lineno);
+            unify(t1.types[i], t2.types[i], node);
         }
         if (alias) t1.aliased = t2.aliased = alias;
     } else {
-        throw new Error("Not unified: " + t1 + ", " + t2);
+        errors.reportError(node.filename, node.lineno, node.column, "Type error: Not unified: " + t1 + ", " + t2);
     }
 };
 
@@ -95,7 +95,7 @@ var analyseFunction = function (functionDecl, funcType, env, nonGeneric, aliases
     var argNames = {};
     _.each(functionDecl.args, function (arg, i) {
         if (argNames[arg.name]) {
-            errors.reportError(currentFile, functionDecl.lineno, "Repeated function argument '" + arg.name + "'");
+            errors.reportError(functionDecl.filename, functionDecl, functionDecl.column, "Repeated function argument '" + arg.name + "'");
         }
 
         var argType;
@@ -137,7 +137,7 @@ var analyseFunction = function (functionDecl, funcType, env, nonGeneric, aliases
             finalResultType = prunedType.types[prunedType.types.length - 1];
         }
 
-        unify(finalResultType, annotationType, functionDecl.lineno);
+        unify(finalResultType, annotationType, functionDecl);
     }
 
     return functionType;
@@ -247,14 +247,14 @@ var analyseWhereDataDecls = function (whereDecls, env, nonGeneric, aliases, cons
         var types = [nameType];
 
         if (env[dataDecl.name]) {
-            errors.reportError(currentFile, dataDecl.lineno, "Multiple declarations of type constructor: " + dataDecl.name);
+            errors.reportError(dataDecl.filename, dataDecl, dataDecl.column, "Multiple declarations of type constructor: " + dataDecl.name);
         }
 
         var argNames = {};
         var argEnv = _.clone(env);
         _.each(dataDecl.args, function (arg) {
             if (argNames[arg.name]) {
-                errors.reportError(currentFile, dataDecl.lineno, "Repeated type variable '" + arg.name + "'");
+                errors.reportError(dataDecl.filename, dataDecl, dataDecl.column, "Repeated type variable '" + arg.name + "'");
             }
 
             var argType;
@@ -282,7 +282,7 @@ var analyseWhereDataDecls = function (whereDecls, env, nonGeneric, aliases, cons
 
         _.each(dataDecl.tags, function (tag) {
             if (env[tag.name]) {
-                errors.reportError(currentFile, dataDecl.lineno, "Multiple declarations for data constructor: " + tag.name);
+                errors.reportError(dataDecl.filename, dataDecl, dataDecl.column, "Multiple declarations for data constructor: " + tag.name);
             }
 
             var tagTypes = [];
@@ -331,7 +331,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             if (node.type) {
                 var returnTypeAnnotation = nodeToType(node.type, env, aliases);
 
-                unify(funcType.types[funcType.types.length - 1], returnTypeAnnotation, node.lineno);
+                unify(funcType.types[funcType.types.length - 1], returnTypeAnnotation, node);
             }
 
             newNonGeneric = newNonGeneric.concat(funcTypeAndNonGenerics[1]);
@@ -345,9 +345,9 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             if (node.type) {
                 var returnTypeAnnotation = nodeToType(node.type, env, aliases);
                 if (functionType instanceof t.FunctionType) {
-                    unify(returnTypeAnnotation, functionType.types[functionType.types.length - 1], node.lineno);
+                    unify(returnTypeAnnotation, functionType.types[functionType.types.length - 1], node);
                 } else {
-                    unify(returnTypeAnnotation, functionType, node.lineno);
+                    unify(returnTypeAnnotation, functionType, node);
                 }
             }
 
@@ -359,7 +359,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
                     var exists = _.find(typeClassArgs, function (a) {
                         try {
-                            unify(instance.fresh(), a.fresh());
+                            unify(instance.fresh(), a.fresh(), constraint);
                         } catch (e) {
                             return false;
                         }
@@ -388,7 +388,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
             var conditionType = analyse(node.condition, newEnv, nonGeneric, aliases, constraints);
 
-            unify(conditionType, new t.BooleanType(), node.condition.lineno);
+            unify(conditionType, new t.BooleanType(), node.condition);
 
             var ifTrueScopeTypes = _.map(withoutComments(node.ifTrue), function (expression) {
                 return analyse(expression, newEnv, nonGeneric, aliases, constraints);
@@ -400,7 +400,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             });
             var ifFalseType = ifFalseScopeTypes[ifFalseScopeTypes.length - 1];
 
-            unify(ifTrueType, ifFalseType, node.lineno);
+            unify(ifTrueType, ifFalseType, node);
 
             return ifTrueType;
         },
@@ -433,9 +433,9 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
                     var index = tagType.types.indexOf(x);
                     if (index != -1) {
-                        unify(funType.types[index], types[i]);
+                        unify(funType.types[index], types[i], node);
                     }
-                    unify(x, types[i]);
+                    unify(x, types[i], node);
                 });
 
                 return funType;
@@ -448,9 +448,9 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 // Unify provided arguments with expected parameter types  
                 for (var i = 0; i < providedArgCount; i++) {
                     if (i >= expectedArgCount) {
-                        throw new Error("Too many arguments provided on line " + node.lineno);
+                        throw new Error("Too many arguments provided on line " + node);
                     }
-                    unify(types[i], funType.types[i], node.lineno);
+                    unify(types[i], funType.types[i], node);
                 }
 
                 if (providedArgCount < expectedArgCount) {
@@ -463,7 +463,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
             var resultType = new t.Variable();
             types.push(resultType);
-            unify(new t.FunctionType(types), funType, node.lineno);
+            unify(new t.FunctionType(types), funType, node);
 
 
             return resultType;
@@ -480,7 +480,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 if (t.prune(valueType) instanceof t.NativeType) {
                     valueType = annotationType;
                 } else {
-                    unify(valueType, annotationType, node.lineno);
+                    unify(valueType, annotationType, node);
                 }
             }
 
@@ -507,7 +507,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var typeClassType = env[node.typeClassName].fresh(nonGeneric);
 
             var instanceType = nodeToType(node.typeName, env, aliases);
-            unify(typeClassType.type, instanceType);
+            unify(typeClassType.type, instanceType, node);
             var objectType = analyse(node.object, env, nonGeneric, aliases, constraints);
             _.each(objectType.props, function (propType, key) {
                 if (!env[key]) {
@@ -516,7 +516,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 if (env[key].typeClass != node.typeClassName) {
                     throw new Error(JSON.stringify(key) + " doesn't exist on type-class " + JSON.stringify(node.typeClassName));
                 }
-                unify(propType, env[key].fresh(nonGeneric));
+                unify(propType, env[key].fresh(nonGeneric), node);
             });
 
             objectType.typeClassInstance = {
@@ -532,7 +532,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 if (t.prune(valueType) instanceof t.NativeType) {
                     return env[node.name];
                 } else {
-                    unify(valueType, env[node.name], node.lineno);
+                    unify(valueType, env[node.name], node);
                 }
             } else {
                 env[node.name] = valueType;
@@ -559,7 +559,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             } else {
                 var propObj = {};
                 propObj[node.property] = new t.Variable();
-                unify(valueType, new t.ObjectType(propObj), node.lineno);
+                unify(valueType, new t.ObjectType(propObj), node);
             }
 
             return t.prune(valueType).getPropertyType(node.property);
@@ -571,23 +571,23 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 return new t.NativeType();
             }
 
-            unify(valueType, new t.ArrayType(new t.Variable()), node.lineno);
+            unify(valueType, new t.ArrayType(new t.Variable()), node);
 
             var accessType = analyse(node.property, env, nonGeneric, aliases, constraints);
-            unify(accessType, new t.NumberType(), node.lineno);
+            unify(accessType, new t.NumberType(), node);
             return t.prune(valueType).type;
         },
         visitUnaryBooleanOperator: function () {
             var resultType = new t.BooleanType();
             var valueType = analyse(node.value, env, nonGeneric, aliases, constraints);
-            unify(valueType, resultType, node.value.lineno);
+            unify(valueType, resultType, node.value);
 
             return resultType;
         },
         visitBinaryGenericOperator: function () {
             var leftType = analyse(node.left, env, nonGeneric, aliases, constraints);
             var rightType = analyse(node.right, env, nonGeneric, aliases, constraints);
-            unify(leftType, rightType, node.lineno);
+            unify(leftType, rightType, node);
 
             return new t.BooleanType();
         },
@@ -595,8 +595,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var resultType = new t.NumberType();
             var leftType = analyse(node.left, env, nonGeneric, aliases, constraints);
             var rightType = analyse(node.right, env, nonGeneric, aliases, constraints);
-            unify(leftType, resultType, node.left.lineno);
-            unify(rightType, resultType, node.right.lineno);
+            unify(leftType, resultType, node.left);
+            unify(rightType, resultType, node.right);
 
             return resultType;
         },
@@ -604,8 +604,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var resultType = new t.BooleanType();
             var leftType = analyse(node.left, env, nonGeneric, aliases, constraints);
             var rightType = analyse(node.right, env, nonGeneric, aliases, constraints);
-            unify(leftType, resultType, node.left.lineno);
-            unify(rightType, resultType, node.right.lineno);
+            unify(leftType, resultType, node.left);
+            unify(rightType, resultType, node.right);
 
             return resultType;
         },
@@ -613,8 +613,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var resultType = new t.StringType();
             var leftType = analyse(node.left, env, nonGeneric, aliases, constraints);
             var rightType = analyse(node.right, env, nonGeneric, aliases, constraints);
-            unify(leftType, resultType, node.left.lineno);
-            unify(rightType, resultType, node.right.lineno);
+            unify(leftType, resultType, node.left);
+            unify(rightType, resultType, node.right);
 
             return resultType;
         },
@@ -624,8 +624,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var combinedTypes = {};
 
             var emptyObjectType = new t.ObjectType({});
-            unify(leftType, emptyObjectType, node.left.lineno);
-            unify(rightType, emptyObjectType, node.right.lineno);
+            unify(leftType, emptyObjectType, node.left);
+            unify(rightType, emptyObjectType, node.right);
 
             var name;
             for (name in leftType.props) {
@@ -655,7 +655,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 if (!tagType) {
                     throw new Error("Couldn't find the tag: " + nodeCase.pattern.tag.value);
                 }
-                unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase.lineno);
+                unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
 
                 var argNames = {};
                 var addVarsToEnv = function (p, lastPath) {
@@ -683,7 +683,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                             },
                             visitPattern: function () {
                                 var resultType = _.last(t.prune(newEnv[v.tag.value]).types).fresh(newNonGeneric);
-                                unify(currentValue, resultType, v.lineno);
+                                unify(currentValue, resultType, v);
 
                                 addVarsToEnv(v, path);
                             }
@@ -695,9 +695,9 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 var caseType = analyse(nodeCase.value, newEnv, newNonGeneric, aliases);
                 if (caseType instanceof t.FunctionType && caseType.types.length == 1) {
                     // For tags that don't have arguments
-                    unify(resultType, _.last(caseType.types), nodeCase.lineno);
+                    unify(resultType, _.last(caseType.types), nodeCase);
                 } else {
-                    unify(resultType, caseType, nodeCase.lineno);
+                    unify(resultType, caseType, nodeCase);
                 }
             });
             return resultType;
@@ -763,7 +763,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
         visitArray: function () {
             var valueType = new t.Variable();
             _.each(node.values, function (v) {
-                unify(valueType, analyse(v, env, nonGeneric, aliases, constraints), v.lineno);
+                unify(valueType, analyse(v, env, nonGeneric, aliases, constraints), v);
             });
             return new t.ArrayType(valueType);
         },
@@ -814,7 +814,7 @@ var nodeToType = function (n, env, aliases) {
                     var freshAlias = alias.body.fresh();
                     _.forEach(tn.args, function (argNode, i) {
                         var argType = nodeToType(argNode, env, aliases);
-                        unify(alias.params[i], argType, argNode.lineno);
+                        unify(alias.params[i], argType, argNode);
                     });
                     return freshAlias;
                 }
@@ -847,7 +847,7 @@ var nodeToType = function (n, env, aliases) {
                 envType = t.prune(envType).fresh();
                 _.forEach(tn.args, function (v, k) {
                     var argType = nodeToType(v, env, aliases);
-                    unify(envType.types[1 + k], argType, v.lineno);
+                    unify(envType.types[1 + k], argType, v);
                 });
                 return envType;
             }
@@ -933,18 +933,13 @@ var typecheck = function (ast, env, aliases, opts) {
     currentFile = opts.filename;
     var types = _.map(ast, function (node) {
         var constraints = [];
-        try {
-
-            var type = analyse(node, env, [], aliases, constraints);
-            _.each(constraints, function (constraint) {
-                solveTypeClassConstraint(constraint, env, function (instance) {
-                    throw "Couldn't find instance of: " + instance.toString();
-                });
+        var type = analyse(node, env, [], aliases, constraints);
+        _.each(constraints, function (constraint) {
+            solveTypeClassConstraint(constraint, env, function (instance) {
+                throw "Couldn't find instance of: " + instance.toString();
             });
-            return type;
-        } catch (e) {
-            errors.reportError(opts.filename, node.lineno, e);
-        }
+        });
+        return type;
     });
     return types && types[0];
 };

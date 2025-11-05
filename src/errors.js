@@ -26,8 +26,8 @@ var getFileContents = function(filename) {
 
 
 
-var reportError = function (filename, line, message) {
-  console.error(filename + ":" + line + ": Error: " + message);
+var reportError = function (filename, line, column,  message) {
+  console.error(filename + ":" + (line + 1) + ":" + column + " : " + message);
     
   if (filename != "stdin") {
     var code = getFileContents(filename);
@@ -41,7 +41,7 @@ var reportError = function (filename, line, message) {
       console.error(line - 1 + " | ", snippet);
       snippet = code.split("\n")[line];
       console.error(line + " | ", snippet);
-      console.error(" ".repeat((line + " | ").length) + " ^");
+      console.error(" ".repeat((line + " | ").length) +  " ".repeat(column - 1) + " ^");
       snippet = code.split("\n")[line+1];
       console.error((line + 1) + " | ", snippet);
     }

@@ -1,7 +1,7 @@
 var typegrammar = require('./typegrammar').bnf;
 
-var n = function(s) {
-    return s + "$$.lineno = yylineno;";
+var n = function(s) {  
+    return s + "$$.lineno = yylineno; $$.filename = yy.filename; $$.column = yy.lexer.tokens[yy.lexer.pos - 2][3];";  
 };
 
 var grammar = {
