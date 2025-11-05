@@ -212,7 +212,6 @@ var literalToken = function (chunk) {
             next = chunk.slice(0, 2);
             if (next == '++') {
                 tokens.push(['CONCAT', tag, lineno, column]);
-                tokens.push([tag, tag, lineno, column]);
                 column += 2;
                 return 2;
             }

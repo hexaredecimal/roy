@@ -21,7 +21,7 @@ parser.lexer = typeparser.lexer = {
         this.yylineno =  token[2];
         this.yycolumn = token[3];
         if (token[0] != 'EOF' && this.pos - 1 >= 0) {
-            this.yycolumn = this.tokens[this.pos - 1];
+            this.yycolumn = this.tokens[this.pos - 1][3];
         }
         this.pos++;
         return token[0];
@@ -43,7 +43,7 @@ parser.parseError = function (str, hash) {
     var column = this.lexer.yycolumn;
     var token = hash.token;
     var message = "Encountered unexpected token: `" + token + "`";
-    errors.reportError(filename, line, message, column);
+    errors.reportError(filename, line, column, message);
 };
 
 
