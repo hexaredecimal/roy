@@ -28,7 +28,6 @@ var getFileContents = function(filename) {
 
 var reportError = function (filename, line, column,  message) {
   console.error(filename + ":" + (line + 1) + ":" + column + " : " + message);
-    
   if (filename != "stdin") {
     var code = getFileContents(filename);
     var splits = code.split("\n");
@@ -45,8 +44,8 @@ var reportError = function (filename, line, column,  message) {
       snippet = code.split("\n")[line+1];
       console.error((line + 1) + " | ", snippet);
     }
+    process.exit(1);
   }
-  process.exit(1);
 };
 
 exports.reportError = reportError;

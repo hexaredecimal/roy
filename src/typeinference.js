@@ -852,7 +852,7 @@ var nodeToType = function (n, env, aliases) {
                 return envType;
             }
 
-            throw new Error("Can't convert from explicit type: " + JSON.stringify(tn));
+            throw new Error("Can't convert from explicit type: `" + tn.value + "`") 
         },
         visitTypeObject: function (to) {
             var types = {};
@@ -932,6 +932,8 @@ var solveTypeClassConstraint = function (constraint, env, unsolvedCallback) {
 var typecheck = function (ast, env, aliases, opts) {
     currentFile = opts.filename;
     var types = _.map(ast, function (node) {
+        try {
+
         var constraints = [];
         var type = analyse(node, env, [], aliases, constraints);
         _.each(constraints, function (constraint) {
@@ -940,6 +942,9 @@ var typecheck = function (ast, env, aliases, opts) {
             });
         });
         return type;
+        } catch (err) {
+            errors.reportError(node.filename, node.lineno, node.column, err);
+        }
     });
     return types && types[0];
 };
