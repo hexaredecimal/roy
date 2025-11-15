@@ -35,6 +35,7 @@ var reportError = function (filename, line, column,  message) {
     if (line <= 1 || line == splits.length - 1) {
       snippet = code.split("\n")[line];
       console.error((line === 0 ? 1 : line) + " | ", snippet);
+      console.error(" ".repeat((line + " | ").length) +  " ".repeat(column - 1) + " ^");
     } else if (line > 1 && line < splits.length - 1) {
       snippet = splits[line-1];
       console.error(line - 1 + " | ", snippet);

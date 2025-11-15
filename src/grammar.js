@@ -52,6 +52,7 @@ var grammar = {
     ],
     "callArgument": [
       ["( expression )", n("$$ = $2;")],
+      ["( opName )", n("$$ = new yy.Identifier($2);")],
       ["! ( expression )", n("$$ = new yy.UnaryBooleanOperator($1, $3);")],
       ["accessor", "$$ = $1;"],
       ["callArgument @ callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],

@@ -514,6 +514,27 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                     return operatorChars.includes(c);
                 });
 
+            const mergeIdentifiers = () => {
+                _.each(node.args, function (arg, i) {
+                    isOperator = arg.value && arg.value.length > 0 &&
+                        arg.value.split('').every(function (c) {
+                            return operatorChars.includes(c);
+                        });
+
+                    if (!isOperator || !(arg instanceof n.Identifier)) return;
+                    if (arg.value && isOperator) {
+                        var argType = types[i];
+                        var mangledName = '__op_' +
+                            encodeOperatorName(arg.value) +
+                            '_' +
+                            argType.types.map(function (t) {
+                                return sanitizeTypeName(t.toString());
+                            }).join('_');
+                        arg.mangledName = mangledName;
+                    }
+                });
+            }
+
             if (isOperator && env.$operators) {
                 var tableKey = types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : null;
 
@@ -550,6 +571,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                                         return sanitizeTypeName(t.toString());
                                     }).join('_');
 
+                                mergeIdentifiers()
                                 node.func.mangledName = mangledName;
                                 return currentType;
                             }
@@ -564,13 +586,15 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         }).join(", ");
 
                     errors.reportError(node.filename, node.lineno, node.column, errorMessage);
+                } else {
+                    errors.reportError(node.filename, node.lineno, node.column, "Operator `" + funcName + "` is not defined");
                 }
             }
-
 
             // Fall back to regular function call handling  
             var funType = t.prune(analyse(node.func, env, nonGeneric, aliases, constraints));
             if (funType instanceof t.NativeType) {
+                mergeIdentifiers()
                 return new t.NativeType();
             }
 
@@ -594,6 +618,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                     unify(x, types[i], node);
                 });
 
+                mergeIdentifiers()
                 return funType;
             }
 
@@ -610,9 +635,11 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
                 if (providedArgCount < expectedArgCount) {
                     var remainingTypes = funType.types.slice(providedArgCount);
+                    mergeIdentifiers()
                     return new t.FunctionType(remainingTypes);
                 }
 
+                mergeIdentifiers()
                 return funType.types[funType.types.length - 1];
             }
 
@@ -620,6 +647,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             types.push(resultType);
             unify(new t.FunctionType(types), funType, node);
 
+            mergeIdentifiers()
             return resultType;
         },
         // #### Let binding
@@ -887,22 +915,12 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
         // Creates a `fresh` copy of a type if the name is found in an
         // environment, otherwise throws an error.
         visitIdentifier: function () {
-            var name = node.value;
-
-            if (!env[name]) {
-                return new t.NativeType();
+            // Regular identifier lookup  
+            if (env[node.value]) {
+                return env[node.value].fresh(nonGeneric);
             }
 
-            if (t.prune(env[name]).typeClass) {
-                var constraintType = env[name].fresh(nonGeneric);
-                constraints.push({
-                    node: node,
-                    type: constraintType
-                });
-                return constraintType;
-            }
-
-            return env[name].fresh(nonGeneric);
+            return new t.NativeType();
         },
         // #### Primitive type
         visitNumber: function () {
@@ -1098,16 +1116,10 @@ var typecheck = function (ast, env, aliases, opts) {
         var BooleanType = new t.BooleanType();
 
         // Arithmetic operators  
-        env.$operators.binary['+'] = [
-            {
-                types: [NumberType, NumberType, NumberType],
-                name: '+',
-                type: new t.FunctionType([NumberType, NumberType, NumberType]),
-                builtin: true
-            },
+        env.$operators.binary['++'] = [
             {
                 types: [StringType, StringType, StringType],
-                name: '+',
+                name: '++',
                 type: new t.FunctionType([StringType, StringType, StringType]),
                 builtin: true
             }
@@ -1118,12 +1130,6 @@ var typecheck = function (ast, env, aliases, opts) {
                 types: [NumberType, NumberType, NumberType],
                 name: '+',
                 type: new t.FunctionType([NumberType, NumberType, NumberType]),
-                builtin: true
-            },
-            {
-                types: [StringType, StringType, StringType],
-                name: '+',
-                type: new t.FunctionType([StringType, StringType, StringType]),
                 builtin: true
             }
         ];
@@ -1150,6 +1156,14 @@ var typecheck = function (ast, env, aliases, opts) {
             type: new t.FunctionType([NumberType, NumberType, NumberType]),
             builtin: true
         }];
+
+        env.$operators.binary['%'] = [{
+            types: [NumberType, NumberType, NumberType],
+            name: '%',
+            type: new t.FunctionType([NumberType, NumberType, NumberType]),
+            builtin: true
+        }];
+
 
         // Comparison operators  
         env.$operators.binary['<'] = [{
@@ -1200,6 +1214,14 @@ var typecheck = function (ast, env, aliases, opts) {
             type: new t.FunctionType([NumberType, NumberType, BooleanType]),
             builtin: true
         }];
+
+        env.$operators.binary['@'] = [{
+            types: [],
+            name: '@',
+            type: new t.FunctionType([new t.ArrayType(new t.Variable()), NumberType, new t.Variable()]),
+            builtin: true
+        }];
+
     }
 
     var types = _.map(ast, function (node) {

@@ -630,45 +630,6 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         visitCall: function () {
             var args = _.map(n.args, compileNode);
 
-            // Check if this is a built-in operator call  
-            if (n.func.mangledName && n.func.mangledName.startsWith('__builtin_')) {
-                // Extract the operator from the mangled name  
-                var opMap = {
-                    '__builtin_add_num': '+',
-                    '__builtin_concat_str': '+',
-                    '__builtin_sub_num': '-',
-                    '__builtin_mul_num': '*',
-                    '__builtin_div_num': '/',
-                    '__builtin_lt_num': '<',
-                    '__builtin_gt_num': '>',
-                    '__builtin_not_bool': '!',
-                    '__builtin_eq': '==',
-                    '__builtin_neq': '!=',
-                    '__builtin_lte_num': '<=',
-                    '__builtin_gte_num': '>='
-                };
-
-                var jsOp = opMap[n.func.mangledName];
-                if (jsOp) {
-                    if (args.length === 2) {
-                        // Binary operator  
-                        return {
-                            type: "BinaryExpression",
-                            operator: jsOp,
-                            left: args[0],
-                            right: args[1]
-                        };
-                    } else if (args.length === 1) {
-                        // Unary operator  
-                        return {
-                            type: "UnaryExpression",
-                            operator: jsOp,
-                            argument: args[0]
-                        };
-                    }
-                }
-            }
-
             // Regular function call handling  
             if (n.typeClassInstance) {
                 args.unshift({
