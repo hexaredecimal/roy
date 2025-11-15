@@ -1,26 +1,26 @@
 var typegrammar = require('./typegrammar').bnf;
 
-var n = function(s) {  
-    return s + "$$.lineno = yylineno; $$.filename = yy.filename; $$.column = yy.lexer.tokens[yy.lexer.pos - 2][3];";  
+var n = function (s) {
+  return s + "$$.lineno = yylineno; $$.filename = yy.filename; $$.column = yy.lexer.tokens[yy.lexer.pos - 2][3];";
 };
 
 var grammar = {
   "startSymbol": "program",
   "options": {
-  "locations": true
+    "locations": true
   },
 
   "operators": [
-  ["left", "RIGHTARROW", "LEFTARROW", "RIGHTFATARROW", "ELEM", "NOTELEM",
-    "FORALL", "COMPOSE"],
-  ["right", "IF", "ELSE"],
-  ["left", "BOOLOP"],
-  ["left", "COMPARE", "WITH"],
-  ["left", "+", "-", "@"],
-  ["left", "MATH", "CONCAT"],
-  ["left", "."]
-  ["right", 'OPERATOR']
-],
+    ["left", "RIGHTARROW", "LEFTARROW", "RIGHTFATARROW", "ELEM", "NOTELEM",
+      "FORALL", "COMPOSE"],
+    ["right", "IF", "ELSE"],
+    ["right", "OPERATOR"],
+    ["left", "BOOLOP"],
+    ["left", "COMPARE", "WITH"],
+    ["left", "+", "-", "@"],
+    ["left", "MATH", "CONCAT"],
+    ["left", "."]
+  ],
 
   "bnf": {
     "program": [
@@ -40,7 +40,7 @@ var grammar = {
     ],
     "statement": [
       ["LET function", "$$ = $2;"],
-      ["LET binding", "$$ = $2;"],
+      ["LET binding", "$$ = $2;"], ,
       ["dataDecl", "$$ = $1;"],
       ["typeDecl", "$$ = $1;"]
     ],
@@ -54,15 +54,15 @@ var grammar = {
       ["( expression )", n("$$ = $2;")],
       ["! ( expression )", n("$$ = new yy.UnaryBooleanOperator($1, $3);")],
       ["accessor", "$$ = $1;"],
-      ["callArgument @ callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
-      ["callArgument MATH callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
-      ["callArgument CONCAT callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
-      ["callArgument + callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
-      ["callArgument - callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
-      ["callArgument BOOLOP callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
-      ["callArgument COMPARE callArgument", ],
+      ["callArgument @ callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument MATH callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument CONCAT callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument + callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument - callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument BOOLOP callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument COMPARE callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument WITH callArgument", n("$$ = new yy.With($1, $3);")],
-      ["callArgument OPERATOR callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument OPERATOR innerExpression", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["literal", "$$ = $1;"]
     ],
     "innerExpression": [
@@ -124,7 +124,7 @@ var grammar = {
       ["IDENTIFIER optType = expression", n("$$ = new yy.Let($1, $4, $2);")]
     ],
     'funcName': [
-      ["IDENTIFIER", "$$ = $1;"], 
+      ["IDENTIFIER", "$$ = $1;"],
       ["( opName )", n("$$ = $2;")]
     ],
     "opName": [
@@ -137,7 +137,7 @@ var grammar = {
       ["BOOLOP", "$$ = $1;"],
       ["COMPARE", "$$ = $1;"],
       ["OPERATOR", "$$ = $1;"],
-    ], 
+    ],
     "paramList": [
       ["( )", "$$ = [];"],
       ["param", "$$ = [$1];"],
@@ -208,10 +208,10 @@ var grammar = {
       ["keyPairs", "$$ = $1;"]
     ],
     "keyPairs": [
-      ["keywordOrIdentifier : expression", "$$ = {}; $$[$1] = $3;"],  
-      ["keywordOrIdentifier", "$$ = {}; $$[$1] = new yy.Identifier($1);"], 
-      ["keyPairs , keywordOrIdentifier : expression", "$$ = $1; $1[$3] = $5;"],  
-      ["keyPairs , keywordOrIdentifier", "$$ = $1; $1[$3] = new yy.Identifier($3);"] 
+      ["keywordOrIdentifier : expression", "$$ = {}; $$[$1] = $3;"],
+      ["keywordOrIdentifier", "$$ = {}; $$[$1] = new yy.Identifier($1);"],
+      ["keyPairs , keywordOrIdentifier : expression", "$$ = $1; $1[$3] = $5;"],
+      ["keyPairs , keywordOrIdentifier", "$$ = $1; $1[$3] = new yy.Identifier($3);"]
     ],
     "accessor": [
       ["IDENTIFIER", n("$$ = new yy.Identifier($1);")],
