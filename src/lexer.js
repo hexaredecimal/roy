@@ -129,144 +129,57 @@ var lineToken = function (chunk) {
 };
 
 var literalToken = function (chunk) {
-    var tag = chunk.slice(0, 1);
-    var next;
-    switch (tag) {
-        case '<':
-            next = chunk.slice(0, 2);
-            if (next == '<=') {
-                tokens.push(['COMPARE', next, lineno, column]);
-                column += 2;
-                return 2;
-            } else if (next == '<-') {
-                tokens.push(['LEFTARROW', next, lineno, column]);
-                column += 2;
-                return 2;
-            } else if (next == '<<') {
-                tokens.push(['MATH', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            tokens.push(['COMPARE', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '>':
-            next = chunk.slice(0, 2);
-            if (next == '>=') {
-                tokens.push(['COMPARE', next, lineno, column]);
-                column += 2;
-                return 2;
-            } else if (next == '>>') {
-                tokens.push(['MATH', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            tokens.push(['COMPARE', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '=':
-            next = chunk.slice(0, 2);
-            if (next == '==') {
-                tokens.push(['COMPARE', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            tokens.push([tag, tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '!':
-            next = chunk.slice(0, 2);
-            if (next == '!=') {
-                tokens.push(['COMPARE', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            tokens.push([tag, tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '*':
-        case '/':
-        case '%':
-            tokens.push(['MATH', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '[':
-        case '|':
-            next = chunk.slice(0, 2);
-            if (next == '||') {
-                tokens.push(['BOOLOP', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            tokens.push([tag, tag, lineno, column]);
-            column += 1;
-            return 1;
-        case ')':
-            if (tokens[tokens.length - 1][0] == 'TERMINATOR') {
-                tokens.pop();
-            }
-            tokens.push([tag, tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '+':
-            next = chunk.slice(0, 2);
-            if (next == '++') {
-                tokens.push(['CONCAT', tag, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            column += 1;
-            tokens.push([tag, tag, lineno, column]);
-            return 1;
-        case '-':
-            next = chunk.slice(0, 2);
-            if (next == '->') {
-                tokens.push(['RIGHTARROW', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            tokens.push([tag, tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '&':
-            next = chunk.slice(0, 2);
-            if (next == '&&') {
-                tokens.push(['BOOLOP', next, lineno, column]);
-                column += 2;
-                return 2;
-            }
-            column += 1;
-            return 0;
-        case 'λ':
-        case '\\':
-            tokens.push(['LAMBDA', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '←':
-            tokens.push(['LEFTARROW', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '→':
-            tokens.push(['RIGHTARROW', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '⇒':
-            tokens.push(['RIGHTFATARROW', tag, lineno, column]);
-            column += 1;
-            return 1;
-        case '@':
-        case ']':
-        case ':':
-        case '.':
-        case ',':
-        case '{':
-        case '}':
-        case '(':
-            tokens.push([tag, tag, lineno, column]);
-            column += 1;
-            return 1;
-    }
-    return 0;
+    var operatorChars = '+-*/%<>=!|&?@:'; 
+    var i = 0;  
+  
+    if (chunk[0] == '(' || chunk[0] == ')' || chunk[0] == '{' || chunk[0] == '}' || chunk[0] == ',' || chunk[0] == '.') {  
+        tokens.push([chunk[0], chunk[0], lineno, column]);  
+        column += 1;  
+        return 1;  
+    }  
+  
+    while (i < chunk.length && operatorChars.includes(chunk[i])) {  
+        i++;  
+    }  
+  
+    if (i === 0) return 0;  
+  
+    var op = chunk.slice(0, i);  
+  
+    var knownOps = {  
+        '>>': 'MATH', '<<': 'MATH',  
+        '>=': 'COMPARE', '<=': 'COMPARE', '==': 'COMPARE', '!=': 'COMPARE',  
+        '++': 'CONCAT',  
+        '||': 'BOOLOP', '&&': 'BOOLOP',  
+        '->': 'RIGHTARROW', '<-': 'LEFTARROW'  
+    };  
+  
+    if (knownOps[op]) {  
+        tokens.push([knownOps[op], op, lineno, column]);  
+        column += op.length;  
+        return op.length;  
+    }  
+  
+    var singleCharOps = {  
+        '<': 'COMPARE', '>': 'COMPARE',  
+        '*': 'MATH', '/': 'MATH', '%': 'MATH'  
+    };  
+  
+    if (i === 1 && singleCharOps[op]) {  
+        tokens.push([singleCharOps[op], op, lineno, column]);  
+        column += op.length;  
+        return op.length;  
+    }  
+  
+    if (i > 1) {  
+        tokens.push(['OPERATOR', op, lineno, column]);  
+        column += i;  
+        return i;  
+    }  
+  
+    tokens.push([op, op, lineno, column]);  
+    column += 1;  
+    return 1;  
 };
 
 var shebangToken = function (chunk) {
@@ -323,6 +236,7 @@ exports.tokenise = function (source, opts) {
         return tokens;
     } catch (e) {
         // lexerError(e, opts.filename);
+        console.log(tokens)
         errors.reportError(opts.filename, lineno, column, e);
     }
 };

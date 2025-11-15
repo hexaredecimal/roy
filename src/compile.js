@@ -18,7 +18,7 @@ parser.lexer = typeparser.lexer = {
     "lex": function () {
         var token = this.tokens[this.pos] ? this.tokens[this.pos] : ['EOF'];
         this.yytext = token[1];
-        this.yylineno =  token[2];
+        this.yylineno = token[2];
         this.yycolumn = token[3];
         if (token[0] != 'EOF' && this.pos - 1 >= 0) {
             this.yycolumn = this.tokens[this.pos - 1][3];
@@ -133,11 +133,13 @@ var liftComments = function (jsAst) {
 
 var extraComments = [];
 
+
 var compileNodeWithEnvToJsAST = function (n, env, opts) {
     if (!opts) opts = {};
     var compileNode = function (n) {
         return compileNodeWithEnvToJsAST(n, env);
     };
+
     var result = n.accept({
         // Top level file
         visitModule: function () {
@@ -185,7 +187,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     type: "VariableDeclarator",
                     id: {
                         type: "Identifier",
-                        name: n.name
+                        name: n.mangledName || n.name
                     },
                     init: func
                 }]
@@ -627,6 +629,47 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         // Call to JavaScript call.
         visitCall: function () {
             var args = _.map(n.args, compileNode);
+
+            // Check if this is a built-in operator call  
+            if (n.func.mangledName && n.func.mangledName.startsWith('__builtin_')) {
+                // Extract the operator from the mangled name  
+                var opMap = {
+                    '__builtin_add_num': '+',
+                    '__builtin_concat_str': '+',
+                    '__builtin_sub_num': '-',
+                    '__builtin_mul_num': '*',
+                    '__builtin_div_num': '/',
+                    '__builtin_lt_num': '<',
+                    '__builtin_gt_num': '>',
+                    '__builtin_not_bool': '!',
+                    '__builtin_eq': '==',
+                    '__builtin_neq': '!=',
+                    '__builtin_lte_num': '<=',
+                    '__builtin_gte_num': '>='
+                };
+
+                var jsOp = opMap[n.func.mangledName];
+                if (jsOp) {
+                    if (args.length === 2) {
+                        // Binary operator  
+                        return {
+                            type: "BinaryExpression",
+                            operator: jsOp,
+                            left: args[0],
+                            right: args[1]
+                        };
+                    } else if (args.length === 1) {
+                        // Unary operator  
+                        return {
+                            type: "UnaryExpression",
+                            operator: jsOp,
+                            argument: args[0]
+                        };
+                    }
+                }
+            }
+
+            // Regular function call handling  
             if (n.typeClassInstance) {
                 args.unshift({
                     type: "Identifier",
@@ -784,7 +827,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             }
             return {
                 type: "Identifier",
-                name: n.value
+                name: n.mangledName || n.value
             };
         },
         visitNumber: function () {
@@ -895,7 +938,9 @@ var compileNodeWithEnv = function (n, env, opts) {
 exports.compileNodeWithEnv = compileNodeWithEnv;
 
 var compile = function (source, env, aliases, opts) {
-    if (!env) env = {};
+    if (!env) {
+        env = {};
+    }
     if (!aliases) aliases = {};
     if (!opts) opts = {};
 

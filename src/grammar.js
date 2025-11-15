@@ -19,6 +19,7 @@ var grammar = {
   ["left", "+", "-", "@"],
   ["left", "MATH", "CONCAT"],
   ["left", "."]
+  ["right", 'OPERATOR']
 ],
 
   "bnf": {
@@ -53,14 +54,15 @@ var grammar = {
       ["( expression )", n("$$ = $2;")],
       ["! ( expression )", n("$$ = new yy.UnaryBooleanOperator($1, $3);")],
       ["accessor", "$$ = $1;"],
-      ["callArgument @ callArgument", n("$$ = new yy.Access($1, $3);")],
-      ["callArgument MATH callArgument", n("$$ = new yy.BinaryNumberOperator($2, $1, $3);")],
-      ["callArgument CONCAT callArgument", n("$$ = new yy.BinaryStringOperator($2, $1, $3);")],
-      ["callArgument + callArgument", n("$$ = new yy.BinaryNumberOperator($2, $1, $3);")],
-      ["callArgument - callArgument", n("$$ = new yy.BinaryNumberOperator($2, $1, $3);")],
-      ["callArgument BOOLOP callArgument", n("$$ = new yy.BinaryBooleanOperator($2, $1, $3);")],
-      ["callArgument COMPARE callArgument", n("$$ = new yy.BinaryGenericOperator($2, $1, $3);")],
+      ["callArgument @ callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument MATH callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument CONCAT callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument + callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument - callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument BOOLOP callArgument",  n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument COMPARE callArgument", ],
       ["callArgument WITH callArgument", n("$$ = new yy.With($1, $3);")],
+      ["callArgument OPERATOR callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["literal", "$$ = $1;"]
     ],
     "innerExpression": [
@@ -116,11 +118,26 @@ var grammar = {
     "optDataParamList": typegrammar.optDataParamList,
 
     "function": [
-      ["IDENTIFIER paramList optType = expression optWhere", n("$$ = new yy.Function($1, $2, [$5], $3, $6);")]
+      ["funcName paramList optType = expression optWhere", n("$$ = new yy.Function($1, $2, [$5], $3, $6);")]
     ],
     "binding": [
       ["IDENTIFIER optType = expression", n("$$ = new yy.Let($1, $4, $2);")]
     ],
+    'funcName': [
+      ["IDENTIFIER", "$$ = $1;"], 
+      ["( opName )", n("$$ = $2;")]
+    ],
+    "opName": [
+      ["@", "$$ = $1;"],
+      ["MATH", "$$ = $1;"],
+      ["CONCAT", "$$ = $1;"],
+      ["+", "$$ = $1;"],
+      ["-", "$$ = $1;"],
+      ["?", "$$ = $1;"],
+      ["BOOLOP", "$$ = $1;"],
+      ["COMPARE", "$$ = $1;"],
+      ["OPERATOR", "$$ = $1;"],
+    ], 
     "paramList": [
       ["( )", "$$ = [];"],
       ["param", "$$ = [$1];"],

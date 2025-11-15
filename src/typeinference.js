@@ -30,7 +30,7 @@ var currentFile = null;
 // In case #2, do a deep unification on the type, using recursion.
 //
 // If neither constraint can be met, the process will throw an error message.
-var unify = function (t1, t2, node) {
+var unify = function (t1, t2, node, die = true) {
     var alias = t1.aliased || t2.aliased;
     var i;
     t1 = t.prune(t1);
@@ -51,12 +51,16 @@ var unify = function (t1, t2, node) {
         var t1str = t1.aliased || t1.toString();
         var t2str = t2.aliased || t2.toString();
         if (t1.name != t2.name || t1.types.length != t2.types.length) {
-            errors.reportError(node.filename, node.lineno, node.column, "Type error: " + t1str + " is not " + t2str);
+            const errorMessage = "Type error: " + t1str + " is not " + t2str;
+            if (!die) throw errorMessage;
+            errors.reportError(node.filename, node.lineno, node.column, errorMessage);
         }
         if (t1 instanceof t.ObjectType) {
             for (i in t2.props) {
                 if (!(i in t1.props)) {
-                    errors.reportError(node.filename, node.lineno, node.column, "Type error: " + + ": " + t1str + " is not " + t2str);
+                    const errorMessage = "Type error: " + + ": " + t1str + " is not " + t2str;
+                    if (!die) throw errorMessage;
+                    errors.reportError(node.filename, node.lineno, node.column, errorMessage);
                 }
                 unify(t1.props[i], t2.props[i], node);
             }
@@ -66,7 +70,9 @@ var unify = function (t1, t2, node) {
         }
         if (alias) t1.aliased = t2.aliased = alias;
     } else {
-        errors.reportError(node.filename, node.lineno, node.column, "Type error: Not unified: " + t1 + ", " + t2);
+        const errorMessage = "Type error: Not unified: " + t1 + ", " + t2;
+        if (!die) throw errorMessage;
+        errors.reportError(node.filename, node.lineno, node.column, errorMessage);
     }
 };
 
@@ -85,6 +91,61 @@ var flattenFunctionType = function (argTypes, resultType) {
 
     return new t.FunctionType(types);
 };
+
+function sanitizeTypeName(type) {
+    var typeStr = type.toString();
+
+    // Handle tuple types: (T1, T2, ...) -> tuple_T1_T2_...  
+    if (typeStr.match(/^\([^)]+\)$/)) {
+        var innerTypes = typeStr.slice(1, -1).split(',').map(function (t) {
+            return t.trim().replace(/[^a-zA-Z0-9]/g, '_');
+        }).join('_');
+        return 'tuple_' + innerTypes;
+    }
+
+    // Handle array types: [T] -> array_T  
+    if (typeStr.match(/^\[.+\]$/)) {
+        var innerType = typeStr.slice(1, -1).trim().replace(/[^a-zA-Z0-9]/g, '_');
+        return 'array_' + innerType;
+    }
+
+    // Handle object types: {x: T1, y: T2} -> object_x_T1_y_T2  
+    if (typeStr.match(/^\{.+\}$/)) {
+        var props = typeStr.slice(1, -1).split(',').map(function (prop) {
+            var parts = prop.split(':').map(function (p) { return p.trim(); });
+            return parts.join('_');
+        }).join('_');
+        return 'object_' + props.replace(/[^a-zA-Z0-9_]/g, '_');
+    }
+
+    // Default: just sanitize the string  
+    return typeStr.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
+}
+
+
+function encodeOperatorName(opName) {
+    var encoding = {
+        '+': 'add',
+        '-': 'sub',
+        '*': 'mul',
+        '/': 'div',
+        '%': 'mod',
+        '<': 'lt',
+        '>': 'gt',
+        '=': 'eq',
+        '!': 'not',
+        '|': 'or',
+        '&': 'and',
+        '?': 'qmark',
+        '@': 'at',
+        ':': 'colon'
+    };
+
+    return opName.split('').map(function (c) {
+        return encoding[c] || c;
+    }).join('_');
+}
+
 
 // ### Helper functions for function definitions
 //
@@ -322,6 +383,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
         //
         // We create temporary types for recursive definitions.
         visitFunction: function () {
+
             var newNonGeneric = nonGeneric.slice();
             var newEnv = _.clone(env);
 
@@ -352,6 +414,34 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             }
 
 
+            var operatorChars = '+-*/%<>=!|&?@:';
+            if (node.name && operatorChars.includes(node.name[0])) {
+                // Count total args from flattened function type  
+                var argCount = functionType.types.length - 1; // Last type is return type  
+                var tableKey = argCount === 1 ? 'unary' : argCount === 2 ? 'binary' : null;
+
+                if (tableKey) {
+                    var mangledName = '__op_' +
+                        encodeOperatorName(node.name) +
+                        '_' +
+                        functionType.types.map(function (t) {
+                            return sanitizeTypeName(t.toString());
+                        }).join('_');
+
+                    node.mangledName = mangledName;
+                    // Store mangled name in the node for code generation  
+                    if (!env.$operators[tableKey][node.name]) {
+                        env.$operators[tableKey][node.name] = [];
+                    }
+
+                    env.$operators[tableKey][node.name].push({
+                        types: functionType.types,
+                        name: node.name,
+                        type: functionType
+                    });
+                }
+            }
+
             var typeClassArgs = [];
             _.each(functionConstraints, function (constraint) {
                 solveTypeClassConstraint(constraint, newEnv, function (instance) {
@@ -381,6 +471,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             }
 
             return functionType;
+
         },
         visitIfThenElse: function () {
             // if statements are compiled into (function() {...})(), thus they introduce a new environment.
@@ -413,6 +504,71 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 return analyse(arg, env, nonGeneric, aliases, constraints);
             });
 
+            // Check if this is an operator call - ALL chars must be operator symbols  
+            var operatorChars = '+-*/%<>=!|&?@:';
+            var funcName = node.func.value;
+
+            // Check if funcName is composed entirely of operator characters  
+            var isOperator = funcName && funcName.length > 0 &&
+                funcName.split('').every(function (c) {
+                    return operatorChars.includes(c);
+                });
+
+            if (isOperator && env.$operators) {
+                var tableKey = types.length === 1 ? 'unary' : types.length === 2 ? 'binary' : null;
+
+                if (tableKey && env.$operators[tableKey][funcName]) {
+                    var candidates = env.$operators[tableKey][funcName];
+
+                    for (var i = 0; i < candidates.length; i++) {
+                        var candidate = candidates[i];
+                        var success = true;
+
+                        try {
+                            var candidateType = candidate.type.fresh(nonGeneric);
+                            var currentType = candidateType;
+
+                            for (var j = 0; j < types.length; j++) {
+                                if (!(currentType instanceof t.FunctionType)) {
+                                    success = false;
+                                    break;
+                                }
+                                unify(types[j], currentType.types[0], node, false);
+
+                                if (currentType.types.length === 2) {
+                                    currentType = currentType.types[1];
+                                } else {
+                                    currentType = new t.FunctionType(currentType.types.slice(1));
+                                }
+                            }
+
+                            if (success) {
+                                var mangledName = '__op_' +
+                                    encodeOperatorName(funcName) +
+                                    '_' +
+                                    candidate.types.map(function (t) {
+                                        return sanitizeTypeName(t.toString());
+                                    }).join('_');
+
+                                node.func.mangledName = mangledName;
+                                return currentType;
+                            }
+                        } catch (e) {
+                            continue;
+                        }
+                    }
+
+                    const errorMessage = "No matching overload found for operator " + funcName +
+                        " with argument types: " + types.map(function (t) {
+                            return t.toString();
+                        }).join(", ");
+
+                    errors.reportError(node.filename, node.lineno, node.column, errorMessage);
+                }
+            }
+
+
+            // Fall back to regular function call handling  
             var funType = t.prune(analyse(node.func, env, nonGeneric, aliases, constraints));
             if (funType instanceof t.NativeType) {
                 return new t.NativeType();
@@ -429,7 +585,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 var tagType = env[node.func.value].fresh(nonGeneric);
 
                 _.each(tagType, function (x, i) {
-                    if (!types[i]) throw new Error("Not enough arguments to " + node.func.value);
+                    if (!types[i]) errors.reportError(node.filename, node.lineno, node.column, "Not enough arguments to " + node.func.value);
 
                     var index = tagType.types.indexOf(x);
                     if (index != -1) {
@@ -442,13 +598,12 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             }
 
             if (funType instanceof t.FunctionType) {
-                var expectedArgCount = funType.types.length - 1; // Last element is return type  
+                var expectedArgCount = funType.types.length - 1;
                 var providedArgCount = types.length;
 
-                // Unify provided arguments with expected parameter types  
                 for (var i = 0; i < providedArgCount; i++) {
                     if (i >= expectedArgCount) {
-                        throw new Error("Too many arguments provided on line " + node);
+                        errors.reportError(node.filename, node.lineno, node.column, "Too many arguments provided on line " + node);
                     }
                     unify(types[i], funType.types[i], node);
                 }
@@ -464,7 +619,6 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var resultType = new t.Variable();
             types.push(resultType);
             unify(new t.FunctionType(types), funType, node);
-
 
             return resultType;
         },
@@ -852,7 +1006,7 @@ var nodeToType = function (n, env, aliases) {
                 return envType;
             }
 
-            throw new Error("Can't convert from explicit type: `" + tn.value + "`") 
+            throw new Error("Can't convert from explicit type: `" + tn.value + "`")
         },
         visitTypeObject: function (to) {
             var types = {};
@@ -931,17 +1085,134 @@ var solveTypeClassConstraint = function (constraint, env, unsolvedCallback) {
 // Run inference on an array of AST nodes.
 var typecheck = function (ast, env, aliases, opts) {
     currentFile = opts.filename;
+    if (!env.$operators) {
+        env.$operators = {
+            binary: {},
+            unary: {}
+        };
+
+
+        // Add built-in binary operators  
+        var NumberType = new t.NumberType();
+        var StringType = new t.StringType();
+        var BooleanType = new t.BooleanType();
+
+        // Arithmetic operators  
+        env.$operators.binary['+'] = [
+            {
+                types: [NumberType, NumberType, NumberType],
+                name: '+',
+                type: new t.FunctionType([NumberType, NumberType, NumberType]),
+                builtin: true
+            },
+            {
+                types: [StringType, StringType, StringType],
+                name: '+',
+                type: new t.FunctionType([StringType, StringType, StringType]),
+                builtin: true
+            }
+        ];
+
+        env.$operators.binary['+'] = [
+            {
+                types: [NumberType, NumberType, NumberType],
+                name: '+',
+                type: new t.FunctionType([NumberType, NumberType, NumberType]),
+                builtin: true
+            },
+            {
+                types: [StringType, StringType, StringType],
+                name: '+',
+                type: new t.FunctionType([StringType, StringType, StringType]),
+                builtin: true
+            }
+        ];
+
+
+
+        env.$operators.binary['-'] = [{
+            types: [NumberType, NumberType, NumberType],
+            name: '-',
+            type: new t.FunctionType([NumberType, NumberType, NumberType]),
+            builtin: true
+        }];
+
+        env.$operators.binary['*'] = [{
+            types: [NumberType, NumberType, NumberType],
+            name: '*',
+            type: new t.FunctionType([NumberType, NumberType, NumberType]),
+            builtin: true
+        }];
+
+        env.$operators.binary['/'] = [{
+            types: [NumberType, NumberType, NumberType],
+            name: '/',
+            type: new t.FunctionType([NumberType, NumberType, NumberType]),
+            builtin: true
+        }];
+
+        // Comparison operators  
+        env.$operators.binary['<'] = [{
+            types: [NumberType, NumberType, BooleanType],
+            name: '<',
+            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+            builtin: true
+        }];
+
+        env.$operators.binary['>'] = [{
+            types: [NumberType, NumberType, BooleanType],
+            name: '>',
+            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+            builtin: true
+        }];
+
+        // Unary operators  
+        env.$operators.unary['!'] = [{
+            types: [BooleanType, BooleanType],
+            name: '!',
+            type: new t.FunctionType([BooleanType, BooleanType]),
+            builtin: true
+        }];
+
+        env.$operators.binary['=='] = [{
+            types: [new t.Variable(), new t.Variable(), BooleanType],
+            name: '==',
+            type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
+            builtin: true
+        }];
+
+        env.$operators.binary['!='] = [{
+            types: [new t.Variable(), new t.Variable(), BooleanType],
+            name: '!=',
+            type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
+            builtin: true
+        }];
+        env.$operators.binary['<='] = [{
+            types: [NumberType, NumberType, BooleanType],
+            name: '<=',
+            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+            builtin: true
+        }];
+
+        env.$operators.binary['>='] = [{
+            types: [NumberType, NumberType, BooleanType],
+            name: '>=',
+            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+            builtin: true
+        }];
+    }
+
     var types = _.map(ast, function (node) {
         try {
 
-        var constraints = [];
-        var type = analyse(node, env, [], aliases, constraints);
-        _.each(constraints, function (constraint) {
-            solveTypeClassConstraint(constraint, env, function (instance) {
-                throw "Couldn't find instance of: " + instance.toString();
+            var constraints = [];
+            var type = analyse(node, env, [], aliases, constraints);
+            _.each(constraints, function (constraint) {
+                solveTypeClassConstraint(constraint, env, function (instance) {
+                    throw "Couldn't find instance of: " + instance.toString();
+                });
             });
-        });
-        return type;
+            return type;
         } catch (err) {
             errors.reportError(node.filename, node.lineno, node.column, err);
         }
