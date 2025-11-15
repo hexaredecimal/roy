@@ -7,7 +7,6 @@ I also would like to use it to learn how does a language like ocaml combine
 imperative concepts (Such as loops and references) while still being a functional language.
 
 ## Features
-- [ ] References
 - [X] No `do` block/Monads
 - [X] Function currying
 - [X] Structural typing (WIP)
@@ -18,7 +17,7 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [ ] Include files
 - [ ] Pattern matching
 - [ ] Typed external functions
-- [ ] Operator overloading
+- [X] Operator overloading
 - [ ] Mutability/References
 - [ ] Custom stdlib (With few external functions)
 - [ ] Build binaries (Using QuickJS as the runtime)
