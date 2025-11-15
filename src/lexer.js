@@ -129,7 +129,7 @@ var lineToken = function (chunk) {
 };
 
 var literalToken = function (chunk) {
-    var operatorChars = '+-*/%<>=!|&?@:'; 
+    var operatorChars = '+-*/%<>=!|&?@:\\'; 
     var i = 0;  
   
     if (chunk[0] == '(' || chunk[0] == ')' || chunk[0] == '{' || chunk[0] == '}' || chunk[0] == ',' || chunk[0] == '.') {  
@@ -151,7 +151,8 @@ var literalToken = function (chunk) {
         '>=': 'COMPARE', '<=': 'COMPARE', '==': 'COMPARE', '!=': 'COMPARE',  
         '++': 'CONCAT',  
         '||': 'BOOLOP', '&&': 'BOOLOP',  
-        '->': 'RIGHTARROW', '<-': 'LEFTARROW'  
+        '->': 'RIGHTARROW', '<-': 'LEFTARROW',
+        '\\': 'LAMBDA',
     };  
   
     if (knownOps[op]) {  
