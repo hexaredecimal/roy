@@ -235,6 +235,24 @@ ObjectType.prototype.toString = function() {
 };
 exports.ObjectType = ObjectType;
 
+var TupleType = function(types) {  
+    this.types = types;  // Array of types for each element  
+};  
+TupleType.prototype = new BaseType();  
+TupleType.prototype.name = "Tuple";  
+TupleType.prototype.fresh = function(nonGeneric, mappings) {  
+    if(!mappings) mappings = {};  
+    return new TupleType(_.map(this.types, function(t) {  
+        return t.fresh(nonGeneric, mappings);  
+    }));  
+};  
+TupleType.prototype.toString = function() {  
+    return '(' + _.map(this.types, function(t) {   
+        return t.toString();   
+    }).join(', ') + ')';  
+};  
+exports.TupleType = TupleType;
+
 var TagNameType = function(name) {
     this.name = name;
 };

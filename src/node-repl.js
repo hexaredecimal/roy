@@ -24,13 +24,10 @@ var getFileContents = function (filename) {
         filenames,
         foundFilename;
 
-    if (filename.match(/\.rml$/) == null) {
-        throw new Error("Expected a file with `.rml` extension but found `" + filename + "`");
-    }
 
     filenames = /\..+$/.test(filename) ? // if an extension is specified,
         [filename] :             // don't bother checking others
-        _.map(["", ".rml"], function (ext) {
+        _.map(["", ".rml", ".js"], function (ext) {
             return filename + ext;
         });
 
@@ -148,8 +145,8 @@ var nodeRepl = function (opts) {
 
                 if (typeof output != 'undefined') {
                     colorLog(32, (
-                        typeof output == 'object' 
-                        ? JSON.stringify(output) : output
+                        typeof output == 'object'
+                            ? JSON.stringify(output) : output
                     ) + " : " + compiled.type);
                 }
                 lastFunction = null;
@@ -235,6 +232,7 @@ var runRoy = function (argv, opts) {
 
     _.each(argv, function (filename) {
         var source = getFileContents(filename);
+        var rtSources = getFileContents("./runtime/runtime.js");
 
         exported = {};
         var outputPath = filename.replace(extensions, '.js');
@@ -258,10 +256,12 @@ var runRoy = function (argv, opts) {
                 output += `\nmain();\n`
             }
 
+            opts.exe = !opts.stdout;
             if (opts.stdout) {
                 console.log(output);
                 return;
             } else if (opts.exe) {
+                output = rtSources + "\n\n" + output;
                 fs.writeFile(outputPath, output, (err) => {
                     if (err) throw err;
                 })
@@ -269,7 +269,12 @@ var runRoy = function (argv, opts) {
                 const cmd = (cmd) => proc.execSync(cmd, { encoding: 'utf-8' });
 
                 var binaryPath = filename.replace(extensions, '');
-                console.log(`build: qjsc ${outputPath}`)
+                cmd(`qjsc -o ${binaryPath} ${outputPath}`)
+                try {
+                    fs.unlinkSync(output);
+                } catch (_) {
+                    // ignore if file doesn't exist
+                }
             }
         }
     });

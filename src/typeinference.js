@@ -858,7 +858,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         if (pattern.value[0] === pattern.value[0].toUpperCase()) {
                             // Constructor with 0 args  
                             var tagType = env[pattern.value];
-                            if (!tagType) throw new Error("Couldn't find constructor: " + pattern.value);
+                            if (!tagType)
+                                errors.reportError(pattern.filename, pattern.lineno, pattern.column, "Couldn't find constructor: " + pattern.value)
                             unify(expectedType, _.last(t.prune(tagType).types).fresh(nonGeneric), pattern);
                         } else {
                             // Variable binding  
@@ -880,7 +881,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                             propTypes[i] = new t.Variable();
                             handlePatternBinding(elemPattern, propTypes[i], env, nonGeneric);
                         });
-                        unify(expectedType, new t.ObjectType(propTypes), pattern);
+                        unify(expectedType, new t.TupleType(propTypes), pattern);
                     },
                     visitObject: function () {
                         var propTypes = {};
@@ -906,7 +907,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         // Handle constructor pattern (uppercase identifier)  
                         var tagType = env[pattern.tag];
                         if (!tagType) {
-                            throw new Error("Couldn't find the tag: " + pattern.tag);
+                            errors.reportError(pattern.filename, pattern.lineno, pattern.column, "Couldn't find type tag: " + pattern.value)
                         }
 
                         unify(expectedType, _.last(t.prune(tagType).types).fresh(nonGeneric), pattern);
@@ -995,7 +996,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             _.each(node.values, function (v, i) {
                 propTypes[i] = analyse(v, env, nonGeneric, aliases, constraints);
             });
-            return new t.ObjectType(propTypes);
+            return new t.TupleType(propTypes);
         },
         visitObject: function () {
             var propTypes = {};
@@ -1078,6 +1079,16 @@ var nodeToType = function (n, env, aliases) {
             throw new Error("Can't convert from explicit type: `" + tn.value + "`")
         },
         visitTypeObject: function (to) {
+            var keys = Object.keys(to.values);
+            var isTuple = keys.every(function (k, i) { return k == i; });
+
+            if (isTuple) {
+                var types = _.map(to.values, function (v) {
+                    return nodeToType(v, env, aliases);
+                });
+                return new t.TupleType(types);
+            }
+
             var types = {};
             _.forEach(to.values, function (v, k) {
                 types[k] = nodeToType(v, env, aliases);
@@ -1286,6 +1297,11 @@ var typecheck = function (ast, env, aliases, opts) {
         new t.ArrayType(new t.Variable())
     ]);
 
+    env['__rml_sys_list_printf'] = new t.FunctionType([
+        new t.StringType(),
+        new t.ArrayType([new t.Variable()]),
+        new t.ArrayType(new t.Variable())
+    ]);
 
 
     var types = _.map(ast, function (node) {
@@ -1301,7 +1317,6 @@ var typecheck = function (ast, env, aliases, opts) {
 
             return type;
         } catch (err) {
-            console.log(err)
             errors.reportError(node.filename, node.lineno, node.column, err);
         }
     });
