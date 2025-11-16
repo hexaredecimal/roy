@@ -729,7 +729,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                         object: structure,
                         property: { type: "Identifier", name: "_" + piece }
                     };
-                }, { type: "Identifier", name: valuePlaceholder }); 
+                }, { type: "Identifier", name: valuePlaceholder });
 
                 return {
                     type: "BinaryExpression",
@@ -1002,13 +1002,16 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 type: "CallExpression",
                 "arguments": [compileNode(n.value)],
                 callee: {
-                    type: "FunctionExpression",
-                    id: null,
-                    params: [{ type: "Identifier", name: valuePlaceholder }],
-                    body: {
-                        type: "BlockStatement",
-                        body: ensureJsASTStatements(pathConditions)
-                    }
+                    type: "SequenceExpression",
+                    expressions: [{
+                        type: "FunctionExpression",
+                        id: null,
+                        params: [{ type: "Identifier", name: valuePlaceholder }],
+                        body: {
+                            type: "BlockStatement",
+                            body: ensureJsASTStatements(pathConditions)
+                        }
+                    }]
                 }
             };
         },
