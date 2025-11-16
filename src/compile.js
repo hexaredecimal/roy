@@ -732,15 +732,19 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 type: "CallExpression",
                 "arguments": [compileNode(n.value)],
                 callee: {
-                    type: "FunctionExpression",
-                    id: null,
-                    params: [{ type: "Identifier", name: valuePlaceholder }],
-                    body: {
-                        type: "BlockStatement",
-                        body: ensureJsASTStatements(pathConditions)
-                    }
+                    type: "SequenceExpression",
+                    expressions: [{
+                        type: "FunctionExpression",
+                        id: null,
+                        params: [{ type: "Identifier", name: valuePlaceholder }],
+                        body: {
+                            type: "BlockStatement",
+                            body: ensureJsASTStatements(pathConditions)
+                        }
+                    }]
                 }
             };
+
         },
         // Call to JavaScript call.
         visitCall: function () {
