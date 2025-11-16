@@ -364,51 +364,6 @@ var withoutComments = function (xs) {
 };
 
 
-function handlePatternBinding(pattern, expectedType, env, nonGeneric) {
-    pattern.accept({
-        visitIdentifier: function () {
-            if (pattern.value === '_') return; // Wildcard pattern  
-
-            // OCaml convention: uppercase = constructor, lowercase = binding  
-            if (pattern.value[0] === pattern.value[0].toUpperCase()) {
-                // Constructor with 0 args  
-                var tagType = env[pattern.value];
-                if (!tagType) throw new Error("Couldn't find constructor: " + pattern.value);
-                unify(expectedType, _.last(t.prune(tagType).types).fresh(nonGeneric), pattern);
-            } else {
-                // Variable binding  
-                env[pattern.value] = expectedType;
-                nonGeneric.push(expectedType);
-            }
-        },
-        visitNumber: function () {
-            unify(expectedType, new t.NumberType(), pattern);
-        },
-        visitString: function () {
-            unify(expectedType, new t.StringType(), pattern);
-        },
-        visitBoolean: function () {
-            unify(expectedType, new t.BooleanType(), pattern);
-        },
-        visitArray: function () {
-            // Nested array pattern  
-            var elemType = new t.Variable();
-            unify(expectedType, new t.ArrayType(elemType), pattern);
-            _.each(pattern.values, function (elem) {
-                handlePatternBinding(elem, elemType, env, nonGeneric);
-            });
-        },
-        visitObject: function () {
-            // Nested object pattern  
-            var propTypes = {};
-            for (var key in pattern.values) {
-                propTypes[key] = new t.Variable();
-                handlePatternBinding(pattern.values[key], propTypes[key], env, nonGeneric);
-            }
-            unify(expectedType, new t.ObjectType(propTypes), pattern);
-        }
-    });
-}
 
 
 // ### Type analysis
@@ -895,6 +850,23 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                     visitBoolean: function () {
                         unify(expectedType, new t.BooleanType(), pattern);
                     },
+
+                    visitIdentifier: function () {
+                        if (pattern.value === '_') return; // Wildcard pattern  
+
+                        // OCaml convention: uppercase = constructor, lowercase = binding  
+                        if (pattern.value[0] === pattern.value[0].toUpperCase()) {
+                            // Constructor with 0 args  
+                            var tagType = env[pattern.value];
+                            if (!tagType) throw new Error("Couldn't find constructor: " + pattern.value);
+                            unify(expectedType, _.last(t.prune(tagType).types).fresh(nonGeneric), pattern);
+                        } else {
+                            // Variable binding  
+                            env[pattern.value] = expectedType;
+                            nonGeneric.push(expectedType);
+                        }
+                    },
+
                     visitArray: function () {
                         var elemType = new t.Variable();
                         unify(expectedType, new t.ArrayType(elemType), pattern);
