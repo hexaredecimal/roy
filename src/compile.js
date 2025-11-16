@@ -133,6 +133,251 @@ var liftComments = function (jsAst) {
 
 var extraComments = [];
 
+var extractLiteralChecks = function (pattern, accessExpr, checks) {
+    pattern.accept({
+        visitIdentifier: function () {
+            // No checks needed  
+        },
+        visitNumber: function () {
+            checks.push({
+                type: "BinaryExpression",
+                operator: "===",
+                left: accessExpr,
+                right: { type: "Literal", value: parseFloat(pattern.value) }
+            });
+        },
+        visitString: function () {
+            checks.push({
+                type: "BinaryExpression",
+                operator: "===",
+                left: accessExpr,
+                right: { type: "Literal", value: eval(pattern.value) }
+            });
+        },
+        visitBoolean: function () {
+            checks.push({
+                type: "BinaryExpression",
+                operator: "===",
+                left: accessExpr,
+                right: { type: "Literal", value: pattern.value === "true" }
+            });
+        },
+        visitArray: function () {
+            _.each(pattern.values, function (elem, i) {
+                extractLiteralChecks(elem, {
+                    type: "MemberExpression",
+                    object: accessExpr,
+                    property: { type: "Literal", value: i },
+                    computed: true
+                }, checks);
+            });
+        },
+        visitTuple: function () {
+            _.each(pattern.values, function (elem, i) {
+                extractLiteralChecks(elem, {
+                    type: "MemberExpression",
+                    object: accessExpr,
+                    property: { type: "Literal", value: i },
+                    computed: true
+                }, checks);
+            });
+        },
+        visitObject: function () {
+            for (var key in pattern.values) {
+                extractLiteralChecks(pattern.values[key], {
+                    type: "MemberExpression",
+                    object: accessExpr,
+                    property: { type: "Identifier", name: key }
+                }, checks);
+            }
+        },
+        visitPattern: function () {
+            // For constructor patterns, check each argument  
+            _.each(pattern.vars, function (v, i) {
+                extractLiteralChecks(v, {
+                    type: "MemberExpression",
+                    computed: false,
+                    object: accessExpr,
+                    property: { type: "Identifier", name: "_" + i }
+                }, checks);
+            });
+        }
+    });
+};
+
+var extractVars = function (pattern, accessExpr, vars) {
+    pattern.accept({
+        visitIdentifier: function () {
+            if (pattern.value === '_') return;
+
+            // OCaml convention: lowercase = binding, uppercase = constructor  
+            if (pattern.value[0] === pattern.value[0].toLowerCase()) {
+                vars.push({
+                    type: "VariableDeclarator",
+                    id: { type: "Identifier", name: pattern.value },
+                    init: accessExpr
+                });
+            }
+            // Uppercase identifiers (constructors with 0 args) don't bind variables  
+        },
+        visitNumber: function () {
+            // Literals don't bind variables  
+        },
+        visitString: function () {
+            // Literals don't bind variables  
+        },
+        visitBoolean: function () {
+            // Literals don't bind variables  
+        },
+        visitArray: function () {
+            _.each(pattern.values, function (elem, i) {
+                extractVars(elem, {
+                    type: "MemberExpression",
+                    object: accessExpr,
+                    property: { type: "Literal", value: i },
+                    computed: true
+                }, vars);
+            });
+        },
+        visitTuple: function () {
+            _.each(pattern.values, function (elem, i) {
+                extractVars(elem, {
+                    type: "MemberExpression",
+                    object: accessExpr,
+                    property: { type: "Literal", value: i },
+                    computed: true
+                }, vars);
+            });
+        },
+        visitObject: function () {
+            for (var key in pattern.values) {
+                extractVars(pattern.values[key], {
+                    type: "MemberExpression",
+                    object: accessExpr,
+                    property: { type: "Identifier", name: key }
+                }, vars);
+            }
+        },
+        visitPattern: function () {
+            // For nested constructor patterns, use the existing getVars logic  
+            var flatMap = function (a, f) {
+                return _.flatten(_.map(a, f));
+            };
+
+            var getVars = function (p, varPath) {
+                var decls = flatMap(p.vars, function (a, i) {
+                    var nextVarPath = varPath.slice();
+                    nextVarPath.push(i);
+
+                    return a.accept({
+                        visitIdentifier: function () {
+                            if (a.value == '_') return [];
+
+                            var value = _.reduceRight(nextVarPath, function (structure, varPathName) {
+                                return {
+                                    type: "MemberExpression",
+                                    computed: false,
+                                    object: structure,
+                                    property: { type: "Identifier", name: "_" + varPathName }
+                                };
+                            }, accessExpr);
+
+                            return [{
+                                type: "VariableDeclarator",
+                                id: { type: "Identifier", name: a.value },
+                                init: value
+                            }];
+                        },
+                        visitPattern: function () {
+                            return getVars(a, nextVarPath);
+                        }
+                    });
+                });
+                return decls;
+            };
+
+            var nestedVars = getVars(pattern, []);
+            _.each(nestedVars, function (v) {
+                vars.push(v);
+            });
+        }
+    });
+};
+
+var getVars = function (pattern, varPath) {
+    var flatMap = function (a, f) {
+        return _.flatten(_.map(a, f));
+    };
+
+    var decls = flatMap(pattern.vars, function (a, i) {
+        var nextVarPath = varPath.slice();
+        nextVarPath.push(i);
+
+        return a.accept({
+            visitIdentifier: function () {
+                if (a.value == '_') return [];
+
+                var value = _.reduceRight(nextVarPath, function (structure, varPathName) {
+                    return {
+                        type: "MemberExpression",
+                        computed: false,
+                        object: structure,
+                        property: { type: "Identifier", name: "_" + varPathName }
+                    };
+                }, { type: "Identifier", name: '__match' });
+
+                return [{
+                    type: "VariableDeclarator",
+                    id: { type: "Identifier", name: a.value },
+                    init: value
+                }];
+            },
+            visitPattern: function () {
+                return getVars(a, nextVarPath);
+            }
+        });
+    });
+
+    if (decls.length) {
+        return {
+            type: "VariableDeclaration",
+            kind: "var",
+            declarations: decls
+        };
+    }
+};
+
+var getTagPaths = function (pattern, patternPath) {
+    var flatMap = function (a, f) {
+        return _.flatten(_.map(a, f));
+    };
+
+    return flatMap(pattern.vars, function (a, i) {
+        var nextPatternPath = patternPath.slice();
+        nextPatternPath.push(i);
+
+        return a.accept({
+            visitIdentifier: function () {
+                return [];
+            },
+            visitNumber: function () {
+                return [];  // Literals don't have nested tags  
+            },
+            visitString: function () {
+                return [];  // Literals don't have nested tags  
+            },
+            visitBoolean: function () {
+                return [];  // Literals don't have nested tags  
+            },
+            visitPattern: function () {
+                var inner = getTagPaths(a, nextPatternPath);
+                inner.unshift({ path: nextPatternPath, tag: a.tag });
+                return inner;
+            }
+        });
+    });
+};
+
 
 var compileNodeWithEnvToJsAST = function (n, env, opts) {
     if (!opts) opts = {};
@@ -476,140 +721,281 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 return _.flatten(_.map(a, f));
             };
 
-            var pathConditions = _.map(n.cases, function (c) {
-                var getVars = function (pattern, varPath) {
-                    var decls = flatMap(pattern.vars, function (a, i) {
-                        var nextVarPath = varPath.slice();
-                        nextVarPath.push(i);
-
-                        return a.accept({
-                            visitIdentifier: function () {
-
-                                if (a.value == '_') return [];
-
-                                var value = _.reduceRight(nextVarPath, function (structure, varPathName) {
-                                    return {
-                                        type: "MemberExpression",
-                                        computed: false,
-                                        object: structure,
-                                        property: { type: "Identifier", name: "_" + varPathName }
-                                    };
-                                }, { type: "Identifier", name: valuePlaceholder });
-                                return [{
-                                    type: "VariableDeclarator",
-                                    id: { type: "Identifier", name: a.value },
-                                    init: value
-                                }];
-                            },
-                            visitPattern: function () {
-                                return getVars(a, nextVarPath).declarations;
-                            }
-                        });
-                    });
-                    if (decls.length) {
-                        return {
-                            type: "VariableDeclaration",
-                            kind: "var",
-                            declarations: decls
-                        };
-                    }
-                };
-                var vars = getVars(c.pattern, []);
-
-                var getTagPaths = function (pattern, patternPath) {
-                    return flatMap(pattern.vars, function (a, i) {
-                        var nextPatternPath = patternPath.slice();
-
-                        nextPatternPath.push(i);
-                        return a.accept({
-                            visitIdentifier: function () {
-                                return [];
-                            },
-                            visitPattern: function () {
-                                var inner = getTagPaths(a, nextPatternPath);
-                                inner.unshift({ path: nextPatternPath, tag: a.tag });
-                                return inner;
-                            }
-                        });
-                    });
-                };
-                var tagPaths = getTagPaths(c.pattern, []);
-                var makeCondition = function (e) {
-                    var pieces = _.reduceRight(e.path, function (structure, piece) {
-                        return {
-                            type: "MemberExpression",
-                            computed: false,
-                            object: structure,
-                            property: { type: "Identifier", name: "_" + piece }
-                        };
-                    }, { type: "Identifier", name: valuePlaceholder });
+            var makeCondition = function (e) {
+                var pieces = _.reduceRight(e.path, function (structure, piece) {
                     return {
-                        type: "BinaryExpression",
-                        operator: "instanceof",
-                        left: pieces,
-                        right: { type: "Identifier", name: e.tag.value }
+                        type: "MemberExpression",
+                        computed: false,
+                        object: structure,
+                        property: { type: "Identifier", name: "_" + piece }
                     };
+                }, { type: "Identifier", name: valuePlaceholder }); 
+
+                return {
+                    type: "BinaryExpression",
+                    operator: "instanceof",
+                    left: pieces,
+                    right: { type: "Identifier", name: e.tag.value }
                 };
-                var extraConditions = null;
-                if (tagPaths.length) {
-                    var lastCondition = makeCondition(tagPaths.pop());
-                    extraConditions = _.reduceRight(tagPaths, function (conditions, e) {
-                        return {
+            };
+
+
+            var pathConditions = _.map(n.cases, function (c) {
+                var test = null;
+                var vars = [];
+                var pattern = c.pattern;
+                var literalChecks = [];
+
+                pattern.accept({
+                    visitNumber: function () {
+                        test = {
+                            type: "BinaryExpression",
+                            operator: "===",
+                            left: { type: "Identifier", name: valuePlaceholder },
+                            right: { type: "Literal", value: parseFloat(pattern.value) }
+                        };
+                    },
+                    visitString: function () {
+                        test = {
+                            type: "BinaryExpression",
+                            operator: "===",
+                            left: { type: "Identifier", name: valuePlaceholder },
+                            right: { type: "Literal", value: eval(pattern.value) }
+                        };
+                    },
+                    visitBoolean: function () {
+                        test = {
+                            type: "BinaryExpression",
+                            operator: "===",
+                            left: { type: "Identifier", name: valuePlaceholder },
+                            right: { type: "Literal", value: pattern.value === "true" }
+                        };
+                    },
+                    visitArray: function () {
+                        extractLiteralChecks(pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
+
+                        test = {
                             type: "LogicalExpression",
                             operator: "&&",
-                            left: e,
-                            right: conditions
+                            left: {
+                                type: "CallExpression",
+                                callee: {
+                                    type: "MemberExpression",
+                                    object: { type: "Identifier", name: "Array" },
+                                    property: { type: "Identifier", name: "isArray" }
+                                },
+                                arguments: [{ type: "Identifier", name: valuePlaceholder }]
+                            },
+                            right: {
+                                type: "BinaryExpression",
+                                operator: "===",
+                                left: {
+                                    type: "MemberExpression",
+                                    object: { type: "Identifier", name: valuePlaceholder },
+                                    property: { type: "Identifier", name: "length" }
+                                },
+                                right: { type: "Literal", value: pattern.values.length }
+                            }
                         };
-                    }, lastCondition);
-                }
 
-                // More specific patterns need to appear first
-                // Need to sort by the length of the path
-                var maxTagPath = _.max(tagPaths, function (t) {
-                    return t.path.length;
+                        _.each(literalChecks, function (check) {
+                            test = {
+                                type: "LogicalExpression",
+                                operator: "&&",
+                                left: test,
+                                right: check
+                            };
+                        });
+
+                        _.each(pattern.values, function (elemPattern, i) {
+                            extractVars(elemPattern, {
+                                type: "MemberExpression",
+                                object: { type: "Identifier", name: valuePlaceholder },
+                                property: { type: "Literal", value: i },
+                                computed: true
+                            }, vars);
+                        });
+                    },
+                    visitTuple: function () {
+                        extractLiteralChecks(pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
+
+                        test = {
+                            type: "LogicalExpression",
+                            operator: "&&",
+                            left: {
+                                type: "CallExpression",
+                                callee: {
+                                    type: "MemberExpression",
+                                    object: { type: "Identifier", name: "Array" },
+                                    property: { type: "Identifier", name: "isArray" }
+                                },
+                                arguments: [{ type: "Identifier", name: valuePlaceholder }]
+                            },
+                            right: {
+                                type: "BinaryExpression",
+                                operator: "===",
+                                left: {
+                                    type: "MemberExpression",
+                                    object: { type: "Identifier", name: valuePlaceholder },
+                                    property: { type: "Identifier", name: "length" }
+                                },
+                                right: { type: "Literal", value: pattern.values.length }
+                            }
+                        };
+
+                        _.each(literalChecks, function (check) {
+                            test = {
+                                type: "LogicalExpression",
+                                operator: "&&",
+                                left: test,
+                                right: check
+                            };
+                        });
+
+                        _.each(pattern.values, function (elemPattern, i) {
+                            extractVars(elemPattern, {
+                                type: "MemberExpression",
+                                object: { type: "Identifier", name: valuePlaceholder },
+                                property: { type: "Literal", value: i },
+                                computed: true
+                            }, vars);
+                        });
+                    },
+                    visitObject: function () {
+                        extractLiteralChecks(pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
+
+                        var propChecks = [];
+                        for (var key in pattern.values) {
+                            propChecks.push({
+                                type: "BinaryExpression",
+                                operator: "in",
+                                left: { type: "Literal", value: key },
+                                right: { type: "Identifier", name: valuePlaceholder }
+                            });
+                        }
+
+                        test = _.reduce(propChecks, function (acc, check) {
+                            return acc ? {
+                                type: "LogicalExpression",
+                                operator: "&&",
+                                left: acc,
+                                right: check
+                            } : check;
+                        }, null);
+
+                        _.each(literalChecks, function (check) {
+                            test = {
+                                type: "LogicalExpression",
+                                operator: "&&",
+                                left: test,
+                                right: check
+                            };
+                        });
+
+                        for (var key in pattern.values) {
+                            extractVars(pattern.values[key], {
+                                type: "MemberExpression",
+                                object: { type: "Identifier", name: valuePlaceholder },
+                                property: { type: "Identifier", name: key }
+                            }, vars);
+                        }
+                    },
+                    visitPattern: function () {
+                        if (pattern.tag.value === '_') {
+                            test = { type: "Literal", value: true };
+                            return;
+                        }
+
+                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toUpperCase()) {
+                            test = {
+                                type: "BinaryExpression",
+                                operator: "instanceof",
+                                left: { type: "Identifier", name: valuePlaceholder },
+                                right: { type: "Identifier", name: pattern.tag.value }
+                            };
+                            return;
+                        }
+
+                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toLowerCase()) {
+                            test = { type: "Literal", value: true };
+                            vars.push({
+                                type: "VariableDeclarator",
+                                id: { type: "Identifier", name: pattern.tag.value },
+                                init: { type: "Identifier", name: valuePlaceholder }
+                            });
+                            return;
+                        }
+
+                        var varsDecl = getVars(c.pattern, []);
+                        if (varsDecl && varsDecl.declarations) {
+                            vars = varsDecl.declarations;
+                        }
+
+                        var tagPaths = getTagPaths(c.pattern, []);
+                        extractLiteralChecks(c.pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
+
+                        test = {
+                            type: "BinaryExpression",
+                            operator: "instanceof",
+                            left: { type: "Identifier", name: valuePlaceholder },
+                            right: { type: "Identifier", name: c.pattern.tag.value }
+                        };
+
+                        _.each(literalChecks, function (check) {
+                            test = {
+                                type: "LogicalExpression",
+                                operator: "&&",
+                                left: test,
+                                right: check
+                            };
+                        });
+
+                        if (tagPaths.length) {
+                            var lastCondition = makeCondition(tagPaths.pop());
+                            var extraConditions = _.reduceRight(tagPaths, function (conditions, e) {
+                                return {
+                                    type: "LogicalExpression",
+                                    operator: "&&",
+                                    left: makeCondition(e),
+                                    right: conditions
+                                };
+                            }, lastCondition);
+
+                            test = {
+                                type: "LogicalExpression",
+                                operator: "&&",
+                                left: test,
+                                right: extraConditions
+                            };
+                        }
+                    }
                 });
-                var maxPath = maxTagPath === -Infinity ? [] : maxTagPath.path;
 
                 var body = [];
-                if (vars) {
-                    body.push(vars);
+                if (vars && vars.length > 0) {
+                    var validVars = _.filter(vars, function (v) {
+                        return v !== undefined && v !== null;
+                    });
+                    if (validVars.length > 0) {
+                        body.push({
+                            type: "VariableDeclaration",
+                            kind: "var",
+                            declarations: validVars
+                        });
+                    }
                 }
+
                 body.push({
                     type: "ReturnStatement",
                     argument: compileNode(c.value)
                 });
-                var test = {
-                    type: "BinaryExpression",
-                    operator: "instanceof",
-                    left: { type: "Identifier", name: valuePlaceholder },
-                    right: { type: "Identifier", name: c.pattern.tag.value }
-                };
-                if (extraConditions) {
-                    test = {
-                        type: "LogicalExpression",
-                        operator: "&&",
-                        left: test,
-                        right: extraConditions
-                    };
-                }
-                return {
-                    path: maxPath,
-                    condition: {
-                        type: "IfStatement",
-                        test: test,
-                        consequent: {
-                            type: "BlockStatement",
-                            body: ensureJsASTStatements(body)
-                        },
-                        alternate: null
-                    }
-                };
-            });
 
-            var cases = _.map(_.sortBy(pathConditions, function (t) {
-                return -t.path.length;
-            }), function (e) {
-                return e.condition;
+                return {
+                    type: "IfStatement",
+                    test: test,
+                    consequent: { type: "BlockStatement", body: ensureJsASTStatements(body) },
+                    alternate: null
+                };
             });
 
             return {
@@ -621,7 +1007,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     params: [{ type: "Identifier", name: valuePlaceholder }],
                     body: {
                         type: "BlockStatement",
-                        body: ensureJsASTStatements(cases)
+                        body: ensureJsASTStatements(pathConditions)
                     }
                 }
             };

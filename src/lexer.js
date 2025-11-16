@@ -25,7 +25,6 @@ var keywordTokens = {
     'true': 'BOOLEAN',
     'false': 'BOOLEAN',
     'let': 'LET',
-    'fn': 'FN',
     'if': 'IF',
     'instance': 'INSTANCE',
     'then': 'THEN',
@@ -33,7 +32,8 @@ var keywordTokens = {
     'data': 'DATA',
     'type': 'TYPE',
     'typeclass': 'TYPECLASS',
-    'match': 'MATCH',
+    'when': 'MATCH',
+    'is': 'IS',
     'case': 'CASE',
     'do': 'DO',
     'return': 'RETURN',
@@ -132,7 +132,11 @@ var literalToken = function (chunk) {
     var operatorChars = '+-*/%<>=!|&?@:\\'; 
     var i = 0;  
   
-    if (chunk[0] == '(' || chunk[0] == ')' || chunk[0] == '{' || chunk[0] == '}' || chunk[0] == ',' || chunk[0] == '.') {  
+    if (chunk[0] == '(' || chunk[0] == ')' 
+     || chunk[0] == '{' || chunk[0] == '}' 
+     || chunk[0] == '[' || chunk[0] == ']' 
+     || chunk[0] == "'"
+     || chunk[0] == ',' || chunk[0] == '.') {  
         tokens.push([chunk[0], chunk[0], lineno, column]);  
         column += 1;  
         return 1;  

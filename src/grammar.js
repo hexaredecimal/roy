@@ -46,14 +46,14 @@ var grammar = {
     ],
     "expression": [
       ["innerExpression", "$$ = $1;"],
-      ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
-      ["innerExpression MATCH caseList", n("$$ = new yy.Match($1, $3);")],
+      ["MATCH innerExpression IS caseList", n("$$ = new yy.Match($2, $4);")],
       ["ifThenElse", "$$ = $1;"]
     ],
     "callArgument": [
       ["( expression )", n("$$ = $2;")],
       ["( opName )", n("$$ = new yy.Identifier($2);")],
       ["! ( expression )", n("$$ = new yy.UnaryBooleanOperator($1, $3);")],
+      ["call", "$$ = $1;"],
       ["accessor", "$$ = $1;"],
       ["callArgument @ callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument MATH callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
@@ -64,28 +64,32 @@ var grammar = {
       ["callArgument COMPARE callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument WITH callArgument", n("$$ = new yy.With($1, $3);")],
       ["callArgument OPERATOR innerExpression", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
       ["literal", "$$ = $1;"]
     ],
     "innerExpression": [
-      ["call", "$$ = $1;"],
       ["callArgument", "$$ = $1;"]
     ],
     "caseList": [
-      ["| CASE pattern = expression", "$$ = [new yy.Case($3, $5)];"],
-      ["caseList | CASE pattern = expression", "$$ = $1; $1.push(new yy.Case($4, $6));"]
+      ["| pattern = expression", "$$ = [new yy.Case($2, $4)];"],
+      ["caseList | pattern = expression", "$$ = $1; $1.push(new yy.Case($3, $5));"]
     ],
     "pattern": [
-      ["innerPattern", "$$ = $1;"],
-      ["identifier", n("$$ = new yy.Pattern($1, []);")]
+      ["identifier patternArgs", n("$$ = new yy.Pattern($1, $2);")],
+      ["NUMBER", n("$$ = new yy.Number($1);")],
+      ["STRING", n("$$ = new yy.String($1);")],
+      ["BOOLEAN", n("$$ = new yy.Boolean($1);")],
+      ["tuple", "$$ = $1;"],
+      ["[ optValues ]", n("$$ = new yy.Array($2);")],
+      ["object", "$$ = $1;"]
     ],
-    "innerPattern": [
-      ["( identifier patternIdentifiers )", n("$$ = new yy.Pattern($2, $3);")]
+    "patternArgs": [
+      ["", "$$ = []"],
+      ["patternIdentifiers", "$$ = $1"]
     ],
     "patternIdentifiers": [
-      ["identifier", "$$ = [$1];"],
-      ["innerPattern", "$$ = [$1];"],
-      ["patternIdentifiers innerPattern", "$$ = $1; $1.push($2);"],
-      ["patternIdentifiers identifier", "$$ = $1; $1.push($2);"]
+      ["pattern", "$$ = [$1];"],
+      ["patternIdentifiers pattern", "$$ = $1; $1.push($2);"]
     ],
     "ifThenElse": [
       ["IF innerExpression THEN innerExpression ELSE innerExpression", n("$$ = new yy.IfThenElse($2, [$4], [$6]);")]
@@ -135,6 +139,7 @@ var grammar = {
       ["+", "$$ = $1;"],
       ["-", "$$ = $1;"],
       ["?", "$$ = $1;"],
+      [":", "$$ = $1;"],
       ["BOOLOP", "$$ = $1;"],
       ["COMPARE", "$$ = $1;"],
       ["OPERATOR", "$$ = $1;"],

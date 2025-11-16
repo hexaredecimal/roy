@@ -156,7 +156,7 @@ var analyseFunction = function (functionDecl, funcType, env, nonGeneric, aliases
     var argNames = {};
     _.each(functionDecl.args, function (arg, i) {
         if (argNames[arg.name]) {
-            errors.reportError(functionDecl.filename, functionDecl, functionDecl.column, "Repeated function argument '" + arg.name + "'");
+            errors.reportError(functionDecl.filename, functionDecl.lineno, functionDecl.column, "Repeated function argument '" + arg.name + "'");
         }
 
         var argType;
@@ -308,14 +308,14 @@ var analyseWhereDataDecls = function (whereDecls, env, nonGeneric, aliases, cons
         var types = [nameType];
 
         if (env[dataDecl.name]) {
-            errors.reportError(dataDecl.filename, dataDecl, dataDecl.column, "Multiple declarations of type constructor: " + dataDecl.name);
+            errors.reportError(dataDecl.filename, dataDecl.lineno, dataDecl.column, "Multiple declarations of type constructor: " + dataDecl.name);
         }
 
         var argNames = {};
         var argEnv = _.clone(env);
         _.each(dataDecl.args, function (arg) {
             if (argNames[arg.name]) {
-                errors.reportError(dataDecl.filename, dataDecl, dataDecl.column, "Repeated type variable '" + arg.name + "'");
+                errors.reportError(dataDecl.filename, dataDecl.lineno, dataDecl.column, "Repeated type variable '" + arg.name + "'");
             }
 
             var argType;
@@ -343,7 +343,7 @@ var analyseWhereDataDecls = function (whereDecls, env, nonGeneric, aliases, cons
 
         _.each(dataDecl.tags, function (tag) {
             if (env[tag.name]) {
-                errors.reportError(dataDecl.filename, dataDecl, dataDecl.column, "Multiple declarations for data constructor: " + tag.name);
+                errors.reportError(dataDecl.filename, dataDecl.lineno, dataDecl.column, "Multiple declarations for data constructor: " + tag.name);
             }
 
             var tagTypes = [];
@@ -362,6 +362,54 @@ var withoutComments = function (xs) {
         return !(x instanceof n.Comment);
     });
 };
+
+
+function handlePatternBinding(pattern, expectedType, env, nonGeneric) {
+    pattern.accept({
+        visitIdentifier: function () {
+            if (pattern.value === '_') return; // Wildcard pattern  
+
+            // OCaml convention: uppercase = constructor, lowercase = binding  
+            if (pattern.value[0] === pattern.value[0].toUpperCase()) {
+                // Constructor with 0 args  
+                var tagType = env[pattern.value];
+                if (!tagType) throw new Error("Couldn't find constructor: " + pattern.value);
+                unify(expectedType, _.last(t.prune(tagType).types).fresh(nonGeneric), pattern);
+            } else {
+                // Variable binding  
+                env[pattern.value] = expectedType;
+                nonGeneric.push(expectedType);
+            }
+        },
+        visitNumber: function () {
+            unify(expectedType, new t.NumberType(), pattern);
+        },
+        visitString: function () {
+            unify(expectedType, new t.StringType(), pattern);
+        },
+        visitBoolean: function () {
+            unify(expectedType, new t.BooleanType(), pattern);
+        },
+        visitArray: function () {
+            // Nested array pattern  
+            var elemType = new t.Variable();
+            unify(expectedType, new t.ArrayType(elemType), pattern);
+            _.each(pattern.values, function (elem) {
+                handlePatternBinding(elem, elemType, env, nonGeneric);
+            });
+        },
+        visitObject: function () {
+            // Nested object pattern  
+            var propTypes = {};
+            for (var key in pattern.values) {
+                propTypes[key] = new t.Variable();
+                handlePatternBinding(pattern.values[key], propTypes[key], env, nonGeneric);
+            }
+            unify(expectedType, new t.ObjectType(propTypes), pattern);
+        }
+    });
+}
+
 
 // ### Type analysis
 //
@@ -398,9 +446,6 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
             newNonGeneric = newNonGeneric.concat(funcTypeAndNonGenerics[1]);
 
-            if (node.name) {
-                newEnv[node.name] = funcType;
-            }
 
             var functionConstraints = [];
             var functionType = analyseFunction(node, funcType, newEnv, newNonGeneric, aliases, functionConstraints);
@@ -442,6 +487,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 }
             }
 
+
             var typeClassArgs = [];
             _.each(functionConstraints, function (constraint) {
                 solveTypeClassConstraint(constraint, newEnv, function (instance) {
@@ -466,7 +512,15 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 functionType.typeClasses.push(instance);
             });
 
-            if (node.name) {
+            if (node.name && !operatorChars.includes(node.name[0])) {
+                if (env[node.name]) {
+                    errors.reportError(
+                        node.filename,
+                        node.lineno,
+                        node.column,
+                        "Function `" + node.name + "` is already defined"
+                    );
+                }
                 env[node.name] = functionType;
             }
 
@@ -827,61 +881,121 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
         visitMatch: function () {
             var resultType = new t.Variable();
             var value = analyse(node.value, env, nonGeneric, aliases, constraints);
-
             var newEnv = _.clone(env);
 
             _.each(node.cases, function (nodeCase) {
                 var newNonGeneric = nonGeneric.slice();
+                const pattern = nodeCase.pattern;
 
-                var tagType = newEnv[nodeCase.pattern.tag.value];
-                if (!tagType) {
-                    throw new Error("Couldn't find the tag: " + nodeCase.pattern.tag.value);
-                }
-                unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
+                pattern.accept({
+                    visitNumber: function () {
+                        unify(value, new t.NumberType(), nodeCase);
+                    },
+                    visitString: function () {
+                        unify(value, new t.StringType(), nodeCase);
+                    },
+                    visitBoolean: function () {
+                        unify(value, new t.BooleanType(), nodeCase);
+                    },
+                    visitArray: function () {
+                        var elemType = new t.Variable();
+                        unify(value, new t.ArrayType(elemType), nodeCase);
 
-                var argNames = {};
-                var addVarsToEnv = function (p, lastPath) {
-                    _.each(p.vars, function (v, i) {
-                        var index = tagType.types.indexOf(env[p.tag.value][i]);
-                        var path = lastPath.slice();
-                        path.push(index);
-
-                        var currentValue = value;
-                        for (var x = 0; x < path.length && path[x] != -1; x++) {
-                            currentValue = t.prune(currentValue).types[path[x]];
+                        _.each(pattern.values, function (elemPattern) {
+                            handlePatternBinding(elemPattern, elemType, newEnv, newNonGeneric);
+                        });
+                    },
+                    visitTuple: function () {
+                        var propTypes = {};
+                        _.each(pattern.values, function (elemPattern, i) {
+                            propTypes[i] = new t.Variable();
+                            handlePatternBinding(elemPattern, propTypes[i], newEnv, newNonGeneric);
+                        });
+                        unify(value, new t.ObjectType(propTypes), nodeCase);
+                    },
+                    visitObject: function () {
+                        var propTypes = {};
+                        for (var key in pattern.values) {
+                            propTypes[key] = new t.Variable();
+                            handlePatternBinding(pattern.values[key], propTypes[key], newEnv, newNonGeneric);
+                        }
+                        unify(value, new t.ObjectType(propTypes), nodeCase);
+                    },
+                    visitPattern: function () {
+                        // Handle wildcard pattern  
+                        if (pattern.tag.value === '_') {
+                            return;
                         }
 
-                        v.accept({
-                            visitIdentifier: function () {
-                                if (v.value == '_') return;
+                        // Handle uppercase identifier (constructor with 0 args)  
+                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toUpperCase()) {
+                            var tagType = newEnv[pattern.tag.value];
+                            if (!tagType) {
+                                throw new Error("Couldn't find the tag: " + pattern.tag.value);
+                            }
+                            unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
+                            return;
+                        }
 
-                                if (argNames[v.value]) {
-                                    throw new Error('Repeated variable "' + v.value + '" in pattern');
+                        // Handle lowercase identifier (variable binding)  
+                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toLowerCase()) {
+                            newEnv[pattern.tag.value] = value;
+                            newNonGeneric.push(value);
+                            return;
+                        }
+
+                        // Handle constructor pattern with arguments  
+                        var tagType = newEnv[pattern.tag.value];
+                        if (!tagType) {
+                            throw new Error("Couldn't find the tag: " + pattern.tag.value);
+                        }
+                        unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
+
+                        var argNames = {};
+                        var addVarsToEnv = function (p, lastPath) {
+                            _.each(p.vars, function (v, i) {
+                                var index = tagType.types.indexOf(env[p.tag.value][i]);
+                                var path = lastPath.slice();
+                                path.push(index);
+
+                                var currentValue = value;
+                                for (var x = 0; x < path.length && path[x] != -1; x++) {
+                                    currentValue = t.prune(currentValue).types[path[x]];
                                 }
 
-                                newEnv[v.value] = env[p.tag.value][i];
-                                newNonGeneric.push(currentValue);
-                                argNames[v.value] = newEnv[v.value];
-                            },
-                            visitPattern: function () {
-                                var resultType = _.last(t.prune(newEnv[v.tag.value]).types).fresh(newNonGeneric);
-                                unify(currentValue, resultType, v);
+                                v.accept({
+                                    visitIdentifier: function () {
+                                        if (v.value == '_') return;
 
-                                addVarsToEnv(v, path);
-                            }
-                        });
-                    });
-                };
-                addVarsToEnv(nodeCase.pattern, []);
+                                        if (argNames[v.value]) {
+                                            throw new Error('Repeated variable "' + v.value + '" in pattern');
+                                        }
+
+                                        newEnv[v.value] = env[p.tag.value][i];
+                                        newNonGeneric.push(currentValue);
+                                        argNames[v.value] = newEnv[v.value];
+                                    },
+                                    visitPattern: function () {
+                                        var resultType = _.last(t.prune(newEnv[v.tag.value]).types).fresh(newNonGeneric);
+                                        unify(currentValue, resultType, v);
+
+                                        addVarsToEnv(v, path);
+                                    }
+                                });
+                            });
+                        };
+                        addVarsToEnv(pattern, []);
+                    }
+                });
 
                 var caseType = analyse(nodeCase.value, newEnv, newNonGeneric, aliases);
                 if (caseType instanceof t.FunctionType && caseType.types.length == 1) {
-                    // For tags that don't have arguments
                     unify(resultType, _.last(caseType.types), nodeCase);
                 } else {
                     unify(resultType, caseType, nodeCase);
                 }
             });
+
             return resultType;
         },
         // Type alias
@@ -1224,6 +1338,19 @@ var typecheck = function (ast, env, aliases, opts) {
 
     }
 
+    env['__rml_sys_list_addFirst'] = new t.FunctionType([
+        new t.Variable(),
+        new t.ArrayType(new t.Variable()),
+        new t.ArrayType(new t.Variable())
+    ]);
+    env['__rml_sys_list_addLast'] = new t.FunctionType([
+        new t.Variable(),
+        new t.ArrayType(new t.Variable()),
+        new t.ArrayType(new t.Variable())
+    ]);
+
+
+
     var types = _.map(ast, function (node) {
         try {
 
@@ -1234,6 +1361,7 @@ var typecheck = function (ast, env, aliases, opts) {
                     throw "Couldn't find instance of: " + instance.toString();
                 });
             });
+
             return type;
         } catch (err) {
             errors.reportError(node.filename, node.lineno, node.column, err);
