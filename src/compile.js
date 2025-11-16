@@ -131,253 +131,7 @@ var liftComments = function (jsAst) {
     return helper(jsAst)[0];
 };
 
-var extraComments = [];
-
-var extractLiteralChecks = function (pattern, accessExpr, checks) {
-    pattern.accept({
-        visitIdentifier: function () {
-            // No checks needed  
-        },
-        visitNumber: function () {
-            checks.push({
-                type: "BinaryExpression",
-                operator: "===",
-                left: accessExpr,
-                right: { type: "Literal", value: parseFloat(pattern.value) }
-            });
-        },
-        visitString: function () {
-            checks.push({
-                type: "BinaryExpression",
-                operator: "===",
-                left: accessExpr,
-                right: { type: "Literal", value: eval(pattern.value) }
-            });
-        },
-        visitBoolean: function () {
-            checks.push({
-                type: "BinaryExpression",
-                operator: "===",
-                left: accessExpr,
-                right: { type: "Literal", value: pattern.value === "true" }
-            });
-        },
-        visitArray: function () {
-            _.each(pattern.values, function (elem, i) {
-                extractLiteralChecks(elem, {
-                    type: "MemberExpression",
-                    object: accessExpr,
-                    property: { type: "Literal", value: i },
-                    computed: true
-                }, checks);
-            });
-        },
-        visitTuple: function () {
-            _.each(pattern.values, function (elem, i) {
-                extractLiteralChecks(elem, {
-                    type: "MemberExpression",
-                    object: accessExpr,
-                    property: { type: "Literal", value: i },
-                    computed: true
-                }, checks);
-            });
-        },
-        visitObject: function () {
-            for (var key in pattern.values) {
-                extractLiteralChecks(pattern.values[key], {
-                    type: "MemberExpression",
-                    object: accessExpr,
-                    property: { type: "Identifier", name: key }
-                }, checks);
-            }
-        },
-        visitPattern: function () {
-            // For constructor patterns, check each argument  
-            _.each(pattern.vars, function (v, i) {
-                extractLiteralChecks(v, {
-                    type: "MemberExpression",
-                    computed: false,
-                    object: accessExpr,
-                    property: { type: "Identifier", name: "_" + i }
-                }, checks);
-            });
-        }
-    });
-};
-
-var extractVars = function (pattern, accessExpr, vars) {
-    pattern.accept({
-        visitIdentifier: function () {
-            if (pattern.value === '_') return;
-
-            // OCaml convention: lowercase = binding, uppercase = constructor  
-            if (pattern.value[0] === pattern.value[0].toLowerCase()) {
-                vars.push({
-                    type: "VariableDeclarator",
-                    id: { type: "Identifier", name: pattern.value },
-                    init: accessExpr
-                });
-            }
-            // Uppercase identifiers (constructors with 0 args) don't bind variables  
-        },
-        visitNumber: function () {
-            // Literals don't bind variables  
-        },
-        visitString: function () {
-            // Literals don't bind variables  
-        },
-        visitBoolean: function () {
-            // Literals don't bind variables  
-        },
-        visitArray: function () {
-            _.each(pattern.values, function (elem, i) {
-                extractVars(elem, {
-                    type: "MemberExpression",
-                    object: accessExpr,
-                    property: { type: "Literal", value: i },
-                    computed: true
-                }, vars);
-            });
-        },
-        visitTuple: function () {
-            _.each(pattern.values, function (elem, i) {
-                extractVars(elem, {
-                    type: "MemberExpression",
-                    object: accessExpr,
-                    property: { type: "Literal", value: i },
-                    computed: true
-                }, vars);
-            });
-        },
-        visitObject: function () {
-            for (var key in pattern.values) {
-                extractVars(pattern.values[key], {
-                    type: "MemberExpression",
-                    object: accessExpr,
-                    property: { type: "Identifier", name: key }
-                }, vars);
-            }
-        },
-        visitPattern: function () {
-            // For nested constructor patterns, use the existing getVars logic  
-            var flatMap = function (a, f) {
-                return _.flatten(_.map(a, f));
-            };
-
-            var getVars = function (p, varPath) {
-                var decls = flatMap(p.vars, function (a, i) {
-                    var nextVarPath = varPath.slice();
-                    nextVarPath.push(i);
-
-                    return a.accept({
-                        visitIdentifier: function () {
-                            if (a.value == '_') return [];
-
-                            var value = _.reduceRight(nextVarPath, function (structure, varPathName) {
-                                return {
-                                    type: "MemberExpression",
-                                    computed: false,
-                                    object: structure,
-                                    property: { type: "Identifier", name: "_" + varPathName }
-                                };
-                            }, accessExpr);
-
-                            return [{
-                                type: "VariableDeclarator",
-                                id: { type: "Identifier", name: a.value },
-                                init: value
-                            }];
-                        },
-                        visitPattern: function () {
-                            return getVars(a, nextVarPath);
-                        }
-                    });
-                });
-                return decls;
-            };
-
-            var nestedVars = getVars(pattern, []);
-            _.each(nestedVars, function (v) {
-                vars.push(v);
-            });
-        }
-    });
-};
-
-var getVars = function (pattern, varPath) {
-    var flatMap = function (a, f) {
-        return _.flatten(_.map(a, f));
-    };
-
-    var decls = flatMap(pattern.vars, function (a, i) {
-        var nextVarPath = varPath.slice();
-        nextVarPath.push(i);
-
-        return a.accept({
-            visitIdentifier: function () {
-                if (a.value == '_') return [];
-
-                var value = _.reduceRight(nextVarPath, function (structure, varPathName) {
-                    return {
-                        type: "MemberExpression",
-                        computed: false,
-                        object: structure,
-                        property: { type: "Identifier", name: "_" + varPathName }
-                    };
-                }, { type: "Identifier", name: '__match' });
-
-                return [{
-                    type: "VariableDeclarator",
-                    id: { type: "Identifier", name: a.value },
-                    init: value
-                }];
-            },
-            visitPattern: function () {
-                return getVars(a, nextVarPath);
-            }
-        });
-    });
-
-    if (decls.length) {
-        return {
-            type: "VariableDeclaration",
-            kind: "var",
-            declarations: decls
-        };
-    }
-};
-
-var getTagPaths = function (pattern, patternPath) {
-    var flatMap = function (a, f) {
-        return _.flatten(_.map(a, f));
-    };
-
-    return flatMap(pattern.vars, function (a, i) {
-        var nextPatternPath = patternPath.slice();
-        nextPatternPath.push(i);
-
-        return a.accept({
-            visitIdentifier: function () {
-                return [];
-            },
-            visitNumber: function () {
-                return [];  // Literals don't have nested tags  
-            },
-            visitString: function () {
-                return [];  // Literals don't have nested tags  
-            },
-            visitBoolean: function () {
-                return [];  // Literals don't have nested tags  
-            },
-            visitPattern: function () {
-                var inner = getTagPaths(a, nextPatternPath);
-                inner.unshift({ path: nextPatternPath, tag: a.tag });
-                return inner;
-            }
-        });
-    });
-};
-
+var extraComments = []
 
 var compileNodeWithEnvToJsAST = function (n, env, opts) {
     if (!opts) opts = {};
@@ -717,109 +471,117 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         },
         visitMatch: function () {
             var valuePlaceholder = '__match';
-            var flatMap = function (a, f) {
-                return _.flatten(_.map(a, f));
-            };
 
-            var makeCondition = function (e) {
-                var pieces = _.reduceRight(e.path, function (structure, piece) {
-                    return {
-                        type: "MemberExpression",
-                        computed: false,
-                        object: structure,
-                        property: { type: "Identifier", name: "_" + piece }
-                    };
-                }, { type: "Identifier", name: valuePlaceholder });
-
-                return {
-                    type: "BinaryExpression",
-                    operator: "instanceof",
-                    left: pieces,
-                    right: { type: "Identifier", name: e.tag.value }
-                };
-            };
-
-
-            var pathConditions = _.map(n.cases, function (c) {
-                var test = null;
-                var vars = [];
-                var pattern = c.pattern;
-                var literalChecks = [];
-
+            // Helper to extract variable bindings from patterns  
+            var extractVars = function (pattern, valueExpr, vars) {
                 pattern.accept({
                     visitNumber: function () {
-                        test = {
-                            type: "BinaryExpression",
-                            operator: "===",
-                            left: { type: "Identifier", name: valuePlaceholder },
-                            right: { type: "Literal", value: parseFloat(pattern.value) }
-                        };
+                        // Literals don't bind variables  
                     },
                     visitString: function () {
-                        test = {
-                            type: "BinaryExpression",
-                            operator: "===",
-                            left: { type: "Identifier", name: valuePlaceholder },
-                            right: { type: "Literal", value: eval(pattern.value) }
-                        };
+                        // Literals don't bind variables  
                     },
                     visitBoolean: function () {
-                        test = {
-                            type: "BinaryExpression",
-                            operator: "===",
-                            left: { type: "Identifier", name: valuePlaceholder },
-                            right: { type: "Literal", value: pattern.value === "true" }
-                        };
+                        // Literals don't bind variables  
+                    },
+                    visitIdentifier: function () {
+                        if (pattern.value === '_') return;
+
+                        vars.push({
+                            type: "VariableDeclarator",
+                            id: { type: "Identifier", name: pattern.value },
+                            init: valueExpr
+                        });
                     },
                     visitArray: function () {
-                        extractLiteralChecks(pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
-
-                        test = {
-                            type: "LogicalExpression",
-                            operator: "&&",
-                            left: {
-                                type: "CallExpression",
-                                callee: {
-                                    type: "MemberExpression",
-                                    object: { type: "Identifier", name: "Array" },
-                                    property: { type: "Identifier", name: "isArray" }
-                                },
-                                arguments: [{ type: "Identifier", name: valuePlaceholder }]
-                            },
-                            right: {
-                                type: "BinaryExpression",
-                                operator: "===",
-                                left: {
-                                    type: "MemberExpression",
-                                    object: { type: "Identifier", name: valuePlaceholder },
-                                    property: { type: "Identifier", name: "length" }
-                                },
-                                right: { type: "Literal", value: pattern.values.length }
-                            }
-                        };
-
-                        _.each(literalChecks, function (check) {
-                            test = {
-                                type: "LogicalExpression",
-                                operator: "&&",
-                                left: test,
-                                right: check
-                            };
-                        });
-
                         _.each(pattern.values, function (elemPattern, i) {
                             extractVars(elemPattern, {
                                 type: "MemberExpression",
-                                object: { type: "Identifier", name: valuePlaceholder },
+                                object: valueExpr,
                                 property: { type: "Literal", value: i },
                                 computed: true
                             }, vars);
                         });
                     },
                     visitTuple: function () {
-                        extractLiteralChecks(pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
+                        _.each(pattern.values, function (elemPattern, i) {
+                            extractVars(elemPattern, {
+                                type: "MemberExpression",
+                                object: valueExpr,
+                                property: { type: "Literal", value: i },
+                                computed: true
+                            }, vars);
+                        });
+                    },
+                    visitObject: function () {
+                        for (var key in pattern.values) {
+                            extractVars(pattern.values[key], {
+                                type: "MemberExpression",
+                                object: valueExpr,
+                                property: { type: "Identifier", name: key }
+                            }, vars);
+                        }
+                    },
+                    visitPattern: function () {
+                        // Wildcard - no binding  
+                        if (pattern.tag === '_') {
+                            return;
+                        }
 
-                        test = {
+                        // Lowercase identifier - variable binding  
+                        if (pattern.vars.length === 0 && pattern.tag[0] === pattern.tag[0].toLowerCase()) {
+                            vars.push({
+                                type: "VariableDeclarator",
+                                id: { type: "Identifier", name: pattern.tag },
+                                init: valueExpr
+                            });
+                            return;
+                        }
+
+                        // Constructor with arguments - recursively extract from args  
+                        _.each(pattern.vars, function (v, i) {
+                            extractVars(v, {
+                                type: "MemberExpression",
+                                object: valueExpr,
+                                property: { type: "Identifier", name: "_" + i }
+                            }, vars);
+                        });
+                    }
+                });
+            };
+            // Helper to build test conditions  
+            var buildTest = function (pattern, valueExpr) {
+                return pattern.accept({
+                    visitNumber: function () {
+                        return {
+                            type: "BinaryExpression",
+                            operator: "===",
+                            left: valueExpr,
+                            right: { type: "Literal", value: parseFloat(pattern.value) }
+                        };
+                    },
+                    visitString: function () {
+                        return {
+                            type: "BinaryExpression",
+                            operator: "===",
+                            left: valueExpr,
+                            right: { type: "Literal", value: eval(pattern.value) }
+                        };
+                    },
+                    visitBoolean: function () {
+                        return {
+                            type: "BinaryExpression",
+                            operator: "===",
+                            left: valueExpr,
+                            right: { type: "Literal", value: pattern.value === "true" }
+                        };
+                    },
+                    visitIdentifier: function () {
+                        // Identifiers are bindings, not tests - they always match  
+                        return { type: "Literal", value: true };
+                    },
+                    visitArray: function () {
+                        var lengthCheck = {
                             type: "LogicalExpression",
                             operator: "&&",
                             left: {
@@ -829,52 +591,65 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                                     object: { type: "Identifier", name: "Array" },
                                     property: { type: "Identifier", name: "isArray" }
                                 },
-                                arguments: [{ type: "Identifier", name: valuePlaceholder }]
+                                arguments: [valueExpr]
                             },
                             right: {
                                 type: "BinaryExpression",
                                 operator: "===",
                                 left: {
                                     type: "MemberExpression",
-                                    object: { type: "Identifier", name: valuePlaceholder },
+                                    object: valueExpr,
                                     property: { type: "Identifier", name: "length" }
                                 },
                                 right: { type: "Literal", value: pattern.values.length }
                             }
                         };
 
-                        _.each(literalChecks, function (check) {
-                            test = {
-                                type: "LogicalExpression",
-                                operator: "&&",
-                                left: test,
-                                right: check
-                            };
-                        });
-
+                        // Add checks for nested literal patterns  
+                        var result = lengthCheck;
                         _.each(pattern.values, function (elemPattern, i) {
-                            extractVars(elemPattern, {
+                            var elemTest = buildTest(elemPattern, {
                                 type: "MemberExpression",
-                                object: { type: "Identifier", name: valuePlaceholder },
+                                object: valueExpr,
                                 property: { type: "Literal", value: i },
                                 computed: true
-                            }, vars);
+                            });
+                            if (elemTest && elemTest.type !== "Literal") {
+                                result = {
+                                    type: "LogicalExpression",
+                                    operator: "&&",
+                                    left: result,
+                                    right: elemTest
+                                };
+                            }
                         });
+                        return result;
+                    },
+                    visitTuple: function () {
+                        // Same as array  
+                        return buildTest({ values: pattern.values, accept: function (v) { return v.visitArray.call(this); } }, valueExpr);
                     },
                     visitObject: function () {
-                        extractLiteralChecks(pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
-
                         var propChecks = [];
                         for (var key in pattern.values) {
                             propChecks.push({
                                 type: "BinaryExpression",
                                 operator: "in",
                                 left: { type: "Literal", value: key },
-                                right: { type: "Identifier", name: valuePlaceholder }
+                                right: valueExpr
                             });
+
+                            var elemTest = buildTest(pattern.values[key], {
+                                type: "MemberExpression",
+                                object: valueExpr,
+                                property: { type: "Identifier", name: key }
+                            });
+                            if (elemTest && elemTest.type !== "Literal") {
+                                propChecks.push(elemTest);
+                            }
                         }
 
-                        test = _.reduce(propChecks, function (acc, check) {
+                        return _.reduce(propChecks, function (acc, check) {
                             return acc ? {
                                 type: "LogicalExpression",
                                 operator: "&&",
@@ -882,107 +657,62 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                                 right: check
                             } : check;
                         }, null);
-
-                        _.each(literalChecks, function (check) {
-                            test = {
-                                type: "LogicalExpression",
-                                operator: "&&",
-                                left: test,
-                                right: check
-                            };
-                        });
-
-                        for (var key in pattern.values) {
-                            extractVars(pattern.values[key], {
-                                type: "MemberExpression",
-                                object: { type: "Identifier", name: valuePlaceholder },
-                                property: { type: "Identifier", name: key }
-                            }, vars);
-                        }
                     },
                     visitPattern: function () {
-                        if (pattern.tag.value === '_') {
-                            test = { type: "Literal", value: true };
-                            return;
+                        // Wildcard always matches  
+                        if (pattern.tag === '_') {
+                            return { type: "Literal", value: true };
                         }
 
-                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toUpperCase()) {
-                            test = {
-                                type: "BinaryExpression",
-                                operator: "instanceof",
-                                left: { type: "Identifier", name: valuePlaceholder },
-                                right: { type: "Identifier", name: pattern.tag.value }
-                            };
-                            return;
+                        // Lowercase identifier - always matches (it's a binding)  
+                        if (pattern.vars.length === 0 && pattern.tag[0] === pattern.tag[0].toLowerCase()) {
+                            return { type: "Literal", value: true };
                         }
 
-                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toLowerCase()) {
-                            test = { type: "Literal", value: true };
-                            vars.push({
-                                type: "VariableDeclarator",
-                                id: { type: "Identifier", name: pattern.tag.value },
-                                init: { type: "Identifier", name: valuePlaceholder }
-                            });
-                            return;
-                        }
-
-                        var varsDecl = getVars(c.pattern, []);
-                        if (varsDecl && varsDecl.declarations) {
-                            vars = varsDecl.declarations;
-                        }
-
-                        var tagPaths = getTagPaths(c.pattern, []);
-                        extractLiteralChecks(c.pattern, { type: "Identifier", name: valuePlaceholder }, literalChecks);
-
-                        test = {
+                        // Constructor pattern  
+                        var test = {
                             type: "BinaryExpression",
                             operator: "instanceof",
-                            left: { type: "Identifier", name: valuePlaceholder },
-                            right: { type: "Identifier", name: c.pattern.tag.value }
+                            left: valueExpr,
+                            right: { type: "Identifier", name: pattern.tag }
                         };
 
-                        _.each(literalChecks, function (check) {
-                            test = {
-                                type: "LogicalExpression",
-                                operator: "&&",
-                                left: test,
-                                right: check
-                            };
-                        });
-
-                        if (tagPaths.length) {
-                            var lastCondition = makeCondition(tagPaths.pop());
-                            var extraConditions = _.reduceRight(tagPaths, function (conditions, e) {
-                                return {
+                        // Add checks for nested patterns in constructor arguments  
+                        _.each(pattern.vars, function (v, i) {
+                            var argTest = buildTest(v, {
+                                type: "MemberExpression",
+                                object: valueExpr,
+                                property: { type: "Identifier", name: "_" + i }
+                            });
+                            if (argTest && argTest.type !== "Literal") {
+                                test = {
                                     type: "LogicalExpression",
                                     operator: "&&",
-                                    left: makeCondition(e),
-                                    right: conditions
+                                    left: test,
+                                    right: argTest
                                 };
-                            }, lastCondition);
+                            }
+                        });
 
-                            test = {
-                                type: "LogicalExpression",
-                                operator: "&&",
-                                left: test,
-                                right: extraConditions
-                            };
-                        }
+                        return test;
                     }
                 });
+            };
+
+            var pathConditions = _.map(n.cases, function (c) {
+                var vars = [];
+                var valueExpr = { type: "Identifier", name: valuePlaceholder };
+
+                extractVars(c.pattern, valueExpr, vars);
+                var test = buildTest(c.pattern, valueExpr);
 
                 var body = [];
-                if (vars && vars.length > 0) {
-                    var validVars = _.filter(vars, function (v) {
-                        return v !== undefined && v !== null;
+                if (vars.length > 0) {
+                    body.push({
+                        type: "VariableDeclaration",
+                        kind: "var",
+                        declarations: vars
                     });
-                    if (validVars.length > 0) {
-                        body.push({
-                            type: "VariableDeclaration",
-                            kind: "var",
-                            declarations: validVars
-                        });
-                    }
                 }
 
                 body.push({
@@ -1002,16 +732,13 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 type: "CallExpression",
                 "arguments": [compileNode(n.value)],
                 callee: {
-                    type: "SequenceExpression",
-                    expressions: [{
-                        type: "FunctionExpression",
-                        id: null,
-                        params: [{ type: "Identifier", name: valuePlaceholder }],
-                        body: {
-                            type: "BlockStatement",
-                            body: ensureJsASTStatements(pathConditions)
-                        }
-                    }]
+                    type: "FunctionExpression",
+                    id: null,
+                    params: [{ type: "Identifier", name: valuePlaceholder }],
+                    body: {
+                        type: "BlockStatement",
+                        body: ensureJsASTStatements(pathConditions)
+                    }
                 }
             };
         },

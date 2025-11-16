@@ -883,202 +883,78 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var value = analyse(node.value, env, nonGeneric, aliases, constraints);
             var newEnv = _.clone(env);
 
-            _.each(node.cases, function (nodeCase) {
-                var newNonGeneric = nonGeneric.slice();
-                const pattern = nodeCase.pattern;
-
+            // Helper function to handle pattern binding recursively  
+            var handlePatternBinding = function (pattern, expectedType, env, nonGeneric) {
                 pattern.accept({
                     visitNumber: function () {
-                        unify(value, new t.NumberType(), nodeCase);
+                        unify(expectedType, new t.NumberType(), pattern);
                     },
                     visitString: function () {
-                        unify(value, new t.StringType(), nodeCase);
+                        unify(expectedType, new t.StringType(), pattern);
                     },
                     visitBoolean: function () {
-                        unify(value, new t.BooleanType(), nodeCase);
+                        unify(expectedType, new t.BooleanType(), pattern);
                     },
                     visitArray: function () {
                         var elemType = new t.Variable();
-                        unify(value, new t.ArrayType(elemType), nodeCase);
-
+                        unify(expectedType, new t.ArrayType(elemType), pattern);
                         _.each(pattern.values, function (elemPattern) {
-                            handlePatternBinding(elemPattern, elemType, newEnv, newNonGeneric);
+                            handlePatternBinding(elemPattern, elemType, env, nonGeneric);
                         });
                     },
                     visitTuple: function () {
                         var propTypes = {};
                         _.each(pattern.values, function (elemPattern, i) {
                             propTypes[i] = new t.Variable();
-                            handlePatternBinding(elemPattern, propTypes[i], newEnv, newNonGeneric);
+                            handlePatternBinding(elemPattern, propTypes[i], env, nonGeneric);
                         });
-                        unify(value, new t.ObjectType(propTypes), nodeCase);
+                        unify(expectedType, new t.ObjectType(propTypes), pattern);
                     },
                     visitObject: function () {
                         var propTypes = {};
                         for (var key in pattern.values) {
                             propTypes[key] = new t.Variable();
-                            handlePatternBinding(pattern.values[key], propTypes[key], newEnv, newNonGeneric);
+                            handlePatternBinding(pattern.values[key], propTypes[key], env, nonGeneric);
                         }
-                        unify(value, new t.ObjectType(propTypes), nodeCase);
+                        unify(expectedType, new t.ObjectType(propTypes), pattern);
                     },
                     visitPattern: function () {
                         // Handle wildcard pattern  
-                        if (pattern.tag.value === '_') {
+                        if (pattern.tag === '_') {
                             return;
                         }
 
-                        // Handle uppercase identifier (constructor with 0 args)  
-                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toUpperCase()) {
-                            var tagType = newEnv[pattern.tag.value];
-                            if (!tagType) {
-                                throw new Error("Couldn't find the tag: " + pattern.tag.value);
-                            }
-                            unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
+                        // Handle variable binding (lowercase identifier with no args)  
+                        if (pattern.vars.length === 0 && pattern.tag[0] === pattern.tag[0].toLowerCase()) {
+                            env[pattern.tag] = expectedType;
+                            nonGeneric.push(expectedType);
                             return;
                         }
 
-                        // Handle lowercase identifier (variable binding)  
-                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toLowerCase()) {
-                            newEnv[pattern.tag.value] = value;
-                            newNonGeneric.push(value);
-                            return;
-                        }
-
-                        // Handle constructor pattern with arguments  
-                        var tagType = newEnv[pattern.tag.value];
+                        // Handle constructor pattern (uppercase identifier)  
+                        var tagType = env[pattern.tag];
                         if (!tagType) {
-                            throw new Error("Couldn't find the tag: " + pattern.tag.value);
+                            throw new Error("Couldn't find the tag: " + pattern.tag);
                         }
-                        unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
 
-                        var argNames = {};
-                        var addVarsToEnv = function (p, lastPath) {
-                            _.each(p.vars, function (v, i) {
-                                var index = tagType.types.indexOf(env[p.tag.value][i]);
-                                var path = lastPath.slice();
-                                path.push(index);
+                        unify(expectedType, _.last(t.prune(tagType).types).fresh(nonGeneric), pattern);
 
-                                var currentValue = value;
-                                for (var x = 0; x < path.length && path[x] != -1; x++) {
-                                    currentValue = t.prune(currentValue).types[path[x]];
-                                }
-
-                                v.accept({
-                                    visitIdentifier: function () {
-                                        if (v.value == '_') return;
-
-                                        if (argNames[v.value]) {
-                                            throw new Error('Repeated variable "' + v.value + '" in pattern');
-                                        }
-
-                                        newEnv[v.value] = env[p.tag.value][i];
-                                        newNonGeneric.push(currentValue);
-                                        argNames[v.value] = newEnv[v.value];
-                                    },
-                                    visitPattern: function () {
-                                        if (pattern.tag.value === '_') {
-                                            return;
-                                        }
-
-                                        // Handle uppercase identifier (constructor with 0 args)  
-                                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toUpperCase()) {
-                                            var tagType = newEnv[pattern.tag.value];
-                                            if (!tagType) {
-                                                throw new Error("Couldn't find the tag: " + pattern.tag.value);
-                                            }
-                                            unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
-                                            return;
-                                        }
-
-                                        // Handle lowercase identifier (variable binding)  
-                                        if (pattern.vars.length === 0 && pattern.tag.value[0] === pattern.tag.value[0].toLowerCase()) {
-                                            newEnv[pattern.tag.value] = value;
-                                            newNonGeneric.push(value);
-                                            return;
-                                        }
-
-                                        // Handle constructor pattern with arguments  
-                                        var tagType = newEnv[pattern.tag.value];
-                                        if (!tagType) {
-                                            throw new Error("Couldn't find the tag: " + pattern.tag.value);
-                                        }
-                                        unify(value, _.last(t.prune(tagType).types).fresh(newNonGeneric), nodeCase);
-
-                                        var argNames = {};
-                                        var addVarsToEnv = function (p, lastPath) {
-                                            _.each(p.vars, function (v, i) {
-                                                var index = tagType.types.indexOf(env[p.tag.value][i]);
-                                                var path = lastPath.slice();
-                                                path.push(index);
-
-                                                var currentValue = value;
-                                                for (var x = 0; x < path.length && path[x] != -1; x++) {
-                                                    currentValue = t.prune(currentValue).types[path[x]];
-                                                }
-
-                                                v.accept({
-                                                    visitIdentifier: function () {
-                                                        if (v.value == '_') return;
-
-                                                        if (argNames[v.value]) {
-                                                            throw new Error('Repeated variable "' + v.value + '" in pattern');
-                                                        }
-
-                                                        newEnv[v.value] = env[p.tag.value][i];
-                                                        newNonGeneric.push(currentValue);
-                                                        argNames[v.value] = newEnv[v.value];
-                                                    },
-                                                    visitNumber: function () {
-                                                        // Literal number in constructor argument - just unify  
-                                                        unify(currentValue, new t.NumberType(), v);
-                                                    },
-                                                    visitString: function () {
-                                                        // Literal string in constructor argument  
-                                                        unify(currentValue, new t.StringType(), v);
-                                                    },
-                                                    visitBoolean: function () {
-                                                        // Literal boolean in constructor argument  
-                                                        unify(currentValue, new t.BooleanType(), v);
-                                                    },
-                                                    visitPattern: function () {
-                                                        // Check if this is a variable binding (lowercase identifier with no args)  
-                                                        if (v.vars.length === 0 && v.tag.value[0] === v.tag.value[0].toLowerCase()) {
-                                                            // This is a variable binding, not a constructor  
-                                                            if (v.tag.value === '_') return; // Skip wildcard  
-
-                                                            if (argNames[v.tag.value]) {
-                                                                throw new Error('Repeated variable "' + v.tag.value + '" in pattern');
-                                                            }
-
-                                                            newEnv[v.tag.value] = env[p.tag.value][i];
-                                                            newNonGeneric.push(currentValue);
-                                                            argNames[v.tag.value] = newEnv[v.tag.value];
-                                                            return;
-                                                        }
-
-                                                        // This is a nested constructor pattern (e.g., Some (Some x))  
-                                                        var nestedTagType = newEnv[v.tag.value];
-                                                        if (!nestedTagType) {
-                                                            throw new Error("Couldn't find the tag: " + v.tag.value);
-                                                        }
-                                                        var resultType = _.last(t.prune(nestedTagType).types).fresh(newNonGeneric);
-                                                        unify(currentValue, resultType, v);
-
-                                                        addVarsToEnv(v, path);
-                                                    }
-                                                });
-                                            });
-                                        };
-                                        addVarsToEnv(pattern, []);
-                                    }
-                                });
-                            });
-                        };
-                        addVarsToEnv(pattern, []);
+                        // Process constructor arguments  
+                        _.each(pattern.vars, function (v, i) {
+                            var argType = env[pattern.tag][i];
+                            handlePatternBinding(v, argType, env, nonGeneric);
+                        });
                     }
                 });
+            };
 
-                var caseType = analyse(nodeCase.value, newEnv, newNonGeneric, aliases);
+            _.each(node.cases, function (nodeCase) {
+                var newNonGeneric = nonGeneric.slice();
+                var caseEnv = _.clone(newEnv);
+
+                handlePatternBinding(nodeCase.pattern, value, caseEnv, newNonGeneric);
+
+                var caseType = analyse(nodeCase.value, caseEnv, newNonGeneric, aliases, constraints);
                 if (caseType instanceof t.FunctionType && caseType.types.length == 1) {
                     unify(resultType, _.last(caseType.types), nodeCase);
                 } else {
@@ -1123,7 +999,6 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             if (env[node.value]) {
                 return env[node.value].fresh(nonGeneric);
             }
-
             return new t.NativeType();
         },
         // #### Primitive type
@@ -1454,6 +1329,7 @@ var typecheck = function (ast, env, aliases, opts) {
 
             return type;
         } catch (err) {
+            console.log(err)
             errors.reportError(node.filename, node.lineno, node.column, err);
         }
     });

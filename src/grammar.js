@@ -75,7 +75,7 @@ var grammar = {
       ["caseList | pattern = expression", "$$ = $1; $1.push(new yy.Case($3, $5));"]
     ],
     "pattern": [
-      ["identifier patternArgs", n("$$ = new yy.Pattern($1, $2);")],
+      ["IDENTIFIER patternArgs", n("$$ = new yy.Pattern($1, $2);")],
       ["NUMBER", n("$$ = new yy.Number($1);")],
       ["STRING", n("$$ = new yy.String($1);")],
       ["BOOLEAN", n("$$ = new yy.Boolean($1);")],
@@ -85,12 +85,23 @@ var grammar = {
     ],
     "patternArgs": [
       ["", "$$ = []"],
-      ["patternIdentifiers", "$$ = $1"]
+      ["patternIdentifiers", "$$ = $1"],
+      ["( patternIdentifiers ) ", "$$ = $2"]
     ],
     "patternIdentifiers": [
-      ["pattern", "$$ = [$1];"],
-      ["patternIdentifiers pattern", "$$ = $1; $1.push($2);"]
+      ["sumTypeArg", "$$ = [$1];"],
+      ["patternIdentifiers sumTypeArg", "$$ = $1; $1.push($2);"]
     ],
+    "sumTypeArg": [
+      ["IDENTIFIER", n("$$ = new yy.Pattern($1, []);")],
+      ["NUMBER", n("$$ = new yy.Number($1);")],
+      ["STRING", n("$$ = new yy.String($1);")],
+      ["BOOLEAN", n("$$ = new yy.Boolean($1);")],
+      ["tuple", "$$ = $1;"],
+      ["[ optValues ]", n("$$ = new yy.Array($2);")],
+      ["object", "$$ = $1;"]
+    ],
+
     "ifThenElse": [
       ["IF innerExpression THEN innerExpression ELSE innerExpression", n("$$ = new yy.IfThenElse($2, [$4], [$6]);")]
     ],
