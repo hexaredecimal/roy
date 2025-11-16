@@ -15,7 +15,7 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [X] Proper error messages
 - [ ] Formatter/Pretty printer (WIP)
 - [ ] Include files
-- [ ] Pattern matching
+- [X] Pattern matching
 - [ ] Typed external functions
 - [X] Operator overloading
 - [ ] Mutability/References
