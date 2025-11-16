@@ -204,6 +204,7 @@ var grammar = {
       ["NUMBER", n("$$ = new yy.Number($1);")],
       ["STRING", n("$$ = new yy.String($1);")],
       ["BOOLEAN", n("$$ = new yy.Boolean($1);")],
+       ["( )", n("$$ = new yy.Unit();")],
       ["tuple", "$$ = $1;"],
       ["[ optValues ]", n("$$ = new yy.Array($2);")],
       ["object", "$$ = $1;"]

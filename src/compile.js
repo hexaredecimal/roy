@@ -932,8 +932,12 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         },
         visitUnit: function () {
             return {
-                type: "Literal",
-                value: null
+                type: "NewExpression",
+                callee: {
+                    type: "Identifier",
+                    name: "Unit"
+                },
+                arguments: []
             };
         },
         visitArray: function () {

@@ -367,6 +367,14 @@ exports.nodes = {
             }
         };
     },
+    Unit: function () {
+
+        this.accept = function (a) {
+            if (a.visitUnit) {
+                return a.visitUnit(this);
+            }
+        };
+    },
     Number: function (value) {
         this.value = value;
 

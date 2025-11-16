@@ -385,6 +385,9 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
         // Assigns the function's type in the environment and returns it.
         //
         // We create temporary types for recursive definitions.
+        visitUnit: function () {
+            return new t.UnitType();
+        },
         visitFunction: function () {
 
             var newNonGeneric = nonGeneric.slice();
@@ -1299,8 +1302,8 @@ var typecheck = function (ast, env, aliases, opts) {
 
     env['__rml_sys_list_printf'] = new t.FunctionType([
         new t.StringType(),
-        new t.ArrayType([new t.Variable()]),
-        new t.ArrayType(new t.Variable())
+        new t.ArrayType([new t.NativeType()]),
+        new t.UnitType()
     ]);
 
 
