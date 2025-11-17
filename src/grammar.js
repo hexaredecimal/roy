@@ -81,7 +81,8 @@ var grammar = {
       ["BOOLEAN", n("$$ = new yy.Boolean($1);")],
       ["tuple", "$$ = $1;"],
       ["[ optValues ]", n("$$ = new yy.Array($2);")],
-      ["object", "$$ = $1;"]
+      ["object", "$$ = $1;"],
+      ["listConstPattern", "$$ = $1;"]
     ],
     "patternArgs": [
       ["", "$$ = []"],
@@ -91,6 +92,13 @@ var grammar = {
     "patternIdentifiers": [
       ["sumTypeArg", "$$ = [$1];"],
       ["patternIdentifiers sumTypeArg", "$$ = $1; $1.push($2);"]
+    ],
+    "listConstPattern" : [
+      ["listConstPatternItems", n("$$ =new yy.ListConstPattern($1);")],
+    ],
+    "listConstPatternItems": [
+      ["pattern", "$$ = [$1];"],
+      ["listConstPatternItems : pattern", "$$ = $1; $1.push($3);"]
     ],
     "sumTypeArg": [
       ["IDENTIFIER", n("$$ = new yy.Pattern($1, []);")],

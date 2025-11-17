@@ -202,6 +202,14 @@ exports.nodes = {
             }
         };
     },
+    ListConstPattern: function (patterns) {
+        this.patterns = patterns;
+        this.accept = function (a) {
+            if (a.visitPattern) {
+                return a.visitListConstPattern(this);
+            }
+        };
+    },
     Pattern: function (tag, vars) {
         this.tag = tag;
         this.vars = vars;

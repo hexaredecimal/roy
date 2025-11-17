@@ -269,12 +269,9 @@ var runRoy = function (argv, opts) {
                 const cmd = (cmd) => proc.execSync(cmd, { encoding: 'utf-8' });
 
                 var binaryPath = filename.replace(extensions, '');
-                cmd(`qjsc -o ${binaryPath} ${outputPath}`)
-                try {
-                    fs.unlinkSync(output);
-                } catch (_) {
-                    // ignore if file doesn't exist
-                }
+                console.log("qjsc " + outputPath)
+                cmd(`qjsc ${outputPath}`)
+                // cmd(`gcc -ggdb -o ${binaryPath} ${binaryPath}.c -I./qjs/ -L./qjs/ -l:libquickjs.a -lm`)
             }
         }
     });

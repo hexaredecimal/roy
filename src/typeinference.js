@@ -69,7 +69,8 @@ var unify = function (t1, t2, node, die = true) {
             unify(t1.types[i], t2.types[i], node);
         }
         if (alias) t1.aliased = t2.aliased = alias;
-    } else {
+    }
+    else {
         const errorMessage = "Type error: Not unified: " + t1 + ", " + t2;
         if (!die) throw errorMessage;
         errors.reportError(node.filename, node.lineno, node.column, errorMessage);
@@ -419,8 +420,17 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
             var operatorChars = '+-*/%<>=!|&?@:';
             if (node.name && operatorChars.includes(node.name[0])) {
-                // Count total args from flattened function type  
                 var argCount = functionType.types.length - 1; // Last type is return type  
+
+                if (argCount == 0 || argCount > 2) {
+                    errors.reportError(
+                        node.filename,
+                        node.lineno,
+                        node.column,
+                        "Invalid operator function for `" + node.name + "`. Operator functions must have 1 to 2 parameters (1 for Unary and 2 for Binary Operators)"                        
+                    );
+                }
+                
                 var tableKey = argCount === 1 ? 'unary' : argCount === 2 ? 'binary' : null;
 
                 if (tableKey) {
@@ -432,7 +442,6 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         }).join('_');
 
                     node.mangledName = mangledName;
-                    // Store mangled name in the node for code generation  
                     if (!env.$operators[tableKey][node.name]) {
                         env.$operators[tableKey][node.name] = [];
                     }
@@ -894,6 +903,21 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         }
                         unify(expectedType, new t.ObjectType(propTypes), pattern);
                     },
+                    visitListConstPattern: function () {
+                        var elemType = new t.Variable();  
+                        unify(expectedType, new t.ArrayType(elemType), pattern);  
+                        
+                        // Process all elements except the last as individual elements  
+                        _.each(pattern.patterns.slice(0, -1), function (elemPattern) {  
+                            handlePatternBinding(elemPattern, elemType, env, nonGeneric);  
+                        });  
+                        
+                        // The last element represents the rest of the list (tail)  
+                        if (pattern.patterns.length > 0) {  
+                            var lastPattern = pattern.patterns[pattern.patterns.length - 1];  
+                            handlePatternBinding(lastPattern, new t.ArrayType(elemType), env, nonGeneric);  
+                        } 
+                    },
                     visitPattern: function () {
                         // Handle wildcard pattern  
                         if (pattern.tag === '_') {
@@ -1302,7 +1326,10 @@ var typecheck = function (ast, env, aliases, opts) {
 
     env['__rml_sys_list_printf'] = new t.FunctionType([
         new t.StringType(),
-        new t.ArrayType([new t.NativeType()]),
+        new t.UnitType()
+    ]);
+    env['exit'] = new t.FunctionType([
+        new t.NumberType(),
         new t.UnitType()
     ]);
 
@@ -1320,6 +1347,7 @@ var typecheck = function (ast, env, aliases, opts) {
 
             return type;
         } catch (err) {
+            console.log(err)
             errors.reportError(node.filename, node.lineno, node.column, err);
         }
     });

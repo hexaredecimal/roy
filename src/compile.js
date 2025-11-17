@@ -522,6 +522,35 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                             }, vars);
                         }
                     },
+                    visitListConstPattern: function () {
+                        // Process all elements except the last  
+                        _.each(pattern.patterns.slice(0, -1), function (elemPattern, i) {    
+                            extractVars(elemPattern, {    
+                                type: "MemberExpression",    
+                                object: valueExpr,    
+                                property: { type: "Literal", value: i },    
+                                computed: true    
+                            }, vars);    
+                        });  
+                        
+                        // The last element gets the rest of the array via slice  
+                        if (pattern.patterns.length > 0) {  
+                            var lastPattern = pattern.patterns[pattern.patterns.length - 1];  
+                            extractVars(lastPattern, {  
+                                type: "CallExpression",  
+                                callee: {  
+                                    type: "MemberExpression",  
+                                    object: valueExpr,  
+                                    property: { type: "Identifier", name: "slice" },  
+                                    computed: false  
+                                },  
+                                arguments: [{   
+                                    type: "Literal",   
+                                    value: pattern.patterns.length - 1   
+                                }]  
+                            }, vars);  
+                        }  
+                    },
                     visitPattern: function () {
                         // Wildcard - no binding  
                         if (pattern.tag === '_') {
@@ -549,6 +578,8 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     }
                 });
             };
+
+
             // Helper to build test conditions  
             var buildTest = function (pattern, valueExpr) {
                 return pattern.accept({
@@ -657,6 +688,52 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                                 right: check
                             } : check;
                         }, null);
+                    },
+                    visitListConstPattern: function () {
+                        // Check if it's an array with at least the required length  
+                        var lengthCheck = {    
+                            type: "LogicalExpression",    
+                            operator: "&&",    
+                            left: {    
+                                type: "CallExpression",    
+                                callee: {    
+                                    type: "MemberExpression",    
+                                    object: { type: "Identifier", name: "Array" },    
+                                    property: { type: "Identifier", name: "isArray" }    
+                                },    
+                                arguments: [valueExpr]    
+                            },    
+                            right: {    
+                                type: "BinaryExpression",    
+                                operator: ">=",  // Changed from === to >=  
+                                left: {    
+                                    type: "MemberExpression",    
+                                    object: valueExpr,    
+                                    property: { type: "Identifier", name: "length" }    
+                                },    
+                                right: { type: "Literal", value: pattern.patterns.length }    
+                            }    
+                        };    
+                    
+                        // Add checks for nested literal patterns (only for non-tail elements)  
+                        var result = lengthCheck;    
+                        _.each(pattern.patterns.slice(0, -1), function (elemPattern, i) {  // Only check non-tail elements  
+                            var elemTest = buildTest(elemPattern, {    
+                                type: "MemberExpression",    
+                                object: valueExpr,    
+                                property: { type: "Literal", value: i },    
+                                computed: true    
+                            });    
+                            if (elemTest && elemTest.type !== "Literal") {    
+                                result = {    
+                                    type: "LogicalExpression",    
+                                    operator: "&&",    
+                                    left: result,    
+                                    right: elemTest    
+                                };    
+                            }    
+                        });    
+                        return result;    
                     },
                     visitPattern: function () {
                         // Wildcard always matches  
