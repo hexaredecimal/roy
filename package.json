@@ -14,11 +14,13 @@
   },
   "main": "src/compile.js",
   "bin": {
-    "roy": "./roy"
+    "execute": "./rmlc",
+   "rmlc": "./rmlc"  
   },
   "scripts": {
-    "prepublish": "node_modules/.bin/grunt jison",
-    "test": "node_modules/.bin/grunt jison lint jasmine"
+    "build:browser": "esbuild src/compile.js --bundle --outfile=dist/royml.browser.js --format=iife --global-name=royml --platform=browser --minify --external:file --external:system",  
+    "build:node": "esbuild src/node-repl.js --bundle --outfile=dist/rmlc.js --format=cjs --platform=node --minify --banner:js='#!/usr/bin/env node' --external:file --external:system",
+    "build:all": "npm run build:node"
   },
   "homepage": "https://todo.com",
   "dependencies": {
@@ -28,9 +30,10 @@
     "unicode-categories": "0.9.1"
   },
   "devDependencies": {
-    "jison": "0.2.7",
-    "grunt": "0.3.15",
     "commonjs-everywhere": "~0.8.0",
-    "jasmine-node": "1.5.0"
+    "esbuild": "^0.27.0",
+    "grunt": "0.3.15",
+    "jasmine-node": "1.5.0",
+    "jison": "0.2.7"
   }
 }

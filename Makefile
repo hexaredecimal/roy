@@ -3,6 +3,9 @@
 all:
 	./node_modules/.bin/grunt
 
+dist:
+	npm run build:all
+
 deps:
 	npm install
 	npm prune
