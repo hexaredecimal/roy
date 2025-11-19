@@ -53,7 +53,6 @@ var grammar = {
       ["( expression )", n("$$ = $2;")],
       ["( opName )", n("$$ = new yy.Identifier($2);")],
       ["! ( expression )", n("$$ = new yy.UnaryBooleanOperator($1, $3);")],
-      ["call", "$$ = $1;"],
       ["accessor", "$$ = $1;"],
       ["callArgument @ callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument MATH callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
@@ -68,7 +67,8 @@ var grammar = {
       ["literal", "$$ = $1;"]
     ],
     "innerExpression": [
-      ["callArgument", "$$ = $1;"]
+      ["callArgument", "$$ = $1;"],
+      ["call", "$$ = $1;"]
     ],
     "caseList": [
       ["| pattern = expression", "$$ = [new yy.Case($2, $4)];"],
@@ -187,8 +187,7 @@ var grammar = {
     ],
     "whereDecl": [
       ["dataDecl", "$$ = $1;"],
-      ["IDENTIFIER paramList optType = block optWhere", n("$$ = new yy.Function($1, $2, $5, $3, $6);")],
-      ["IDENTIFIER paramList optType = expression", n("$$ = new yy.Function($1, $2, [$5], $3, []);")]
+      ["funcName paramList optType = expression optWhere", n("$$ = new yy.Function($1, $2, [$5], $3, $6);")]
     ],
 
     "call": [
