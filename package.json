@@ -19,7 +19,7 @@
   },
   "scripts": {
     "build:browser": "esbuild src/compile.js --bundle --outfile=dist/royml.browser.js --format=iife --global-name=royml --platform=browser --minify --external:file --external:system",  
-    "build:node": "esbuild src/node-repl.js --bundle --outfile=dist/rmlc.js --format=cjs --platform=node --minify --banner:js='#!/usr/bin/env node' --external:file --external:system",
+    "build:node": "esbuild src/node-repl.js --bundle --outfile=dist/rmlc.js --format=cjs --platform=node --banner:js='#!/usr/bin/env node' --external:file --external:system --external:source-map --external:escodegen --external:underscore --external:unicode-categories",  
     "build:all": "npm run build:node"
   },
   "homepage": "https://todo.com",
