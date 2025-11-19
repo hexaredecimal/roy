@@ -47,7 +47,7 @@ var grammar = {
     "expression": [
       ["innerExpression", "$$ = $1;"],
       ["MATCH innerExpression IS caseList", n("$$ = new yy.Match($2, $4);")],
-      ["ifThenElse", "$$ = $1;"]
+      ["ifThenElse", "$$ = $1;"],
     ],
     "callArgument": [
       ["( expression )", n("$$ = $2;")],
@@ -62,6 +62,7 @@ var grammar = {
       ["callArgument BOOLOP innerExpression", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument COMPARE innerExpression", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument OPERATOR callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["callArgument OPERATOR call", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument WITH innerExpression", n("$$ = new yy.With($1, $3);")],
       ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
       ["literal", "$$ = $1;"]
@@ -196,10 +197,17 @@ var grammar = {
     ],
     "argList": [
       ["( )", "$$ = [];"],
-      ["callArgument", "$$ = [$1];"],
+      ["funcCallArg", "$$ = [$1];"],
       ["argList ( )", "$$ = $1;"],
-      ["argList callArgument", "$$ = $1; $1.push($2);"]
+      ["argList funcCallArg", "$$ = $1; $1.push($2);"]
     ],
+
+    "funcCallArg": [
+      ["literal", "$$ = $1;"],
+      ["accessor", "$$ = $1;"],
+      ["( expression )", n("$$ = $2;")],
+    ],
+    
     "tuple": [
       ["( innerExpression , tupleList )", n("$4.unshift($2); $$ = new yy.Tuple($4);")]
     ],
