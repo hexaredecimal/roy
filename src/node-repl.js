@@ -376,7 +376,11 @@ var main = function () {
 
     // Meta-commands configuration
     var opts = {
-        info: JSON.parse(fs.readFileSync(path.dirname(__dirname) + '/package.json', 'utf8')),
+        info: {  
+            version:  '0.1.0',  
+            description:  'RoyML Compiler',  
+            author: 'Hexaredecimal'  
+        },  
         nodejs: true,
         run: false,
         includePrelude: true,
