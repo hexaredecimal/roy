@@ -167,7 +167,7 @@ var literalToken = function (chunk) {
   
     var singleCharOps = {  
         '<': 'COMPARE', '>': 'COMPARE',  
-        '*': 'MATH', '/': 'MATH', '%': 'MATH'  
+        '*': 'MATH', '/': 'MATH', '%': 'MATH',
     };  
   
     if (i === 1 && singleCharOps[op]) {  
