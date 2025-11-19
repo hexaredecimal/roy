@@ -1324,8 +1324,8 @@ var typecheck = function (ast, env, aliases, opts) {
         new t.ArrayType(new t.Variable())
     ]);
 
-    env['__rml_sys_list_printf'] = new t.FunctionType([
-        new t.StringType(),
+    env['__rml_print'] = new t.FunctionType([
+        new t.Variable(),
         new t.UnitType()
     ]);
     env['exit'] = new t.FunctionType([
