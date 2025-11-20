@@ -159,6 +159,13 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     body.body.push(compileNode(w));
                 });
             }
+
+            if (n.body === null || (Array.isArray(n.body) && n.body.length === 1 && n.body[0] === null)) {  
+                throw new Error("Function '" + (n.name || "<anonymous>") + "' at line " + n.lineno +   
+                            " has no body. Did you forget #[extern] annotation?");  
+            }  
+      
+            
             var exprsWithoutComments = _.map(splitComments(n.body), compileNode);
             exprsWithoutComments.push({
                 type: "ReturnStatement",
@@ -837,6 +844,15 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
 
             var result = compileNode(n.func);
 
+            if (n.isEager) {  
+                return {  
+                    type: "CallExpression",  
+                    "arguments": args,  
+                    callee: result  
+                };  
+            }  
+
+
             _.each(args, function (arg) {
                 result = {
                     type: "CallExpression",
@@ -1120,6 +1136,92 @@ var compile = function (source, env, aliases, opts) {
 
     // Export types
     ast.body = _.map(ast.body, function (n) {
+
+        if (n.annotations && n.annotations.length > 0) {  
+            for (var i = 0; i < n.annotations.length; i++) {  
+                var ann = n.annotations[i];  
+                if (ann instanceof nodes.IdAnnotation) {  
+                    if (ann.name === 'export') {  
+                        return exportType(n, env, opts.exported, opts.nodejs);  
+                    }  
+                    if (ann.name === 'async') {  
+                        n.isAsync = true;  
+                    }  
+                }  
+                
+                if (ann instanceof nodes.FuncAnnotation) {
+                                
+                    if (ann.name === 'extern') {  
+                        // Validate it's a Function node  
+                        if (!(n instanceof nodes.Function)) {  
+                            throw new Error("extern annotation can only be applied to functions at line " + n.lineno);  
+                        }  
+                        
+                        // Find the innermost curried function by traversing down  
+                        var currentFunc = n;  
+                        while (currentFunc.body &&   
+                            currentFunc.body.length === 1 &&   
+                            currentFunc.body[0] instanceof nodes.Function) {  
+                            currentFunc = currentFunc.body[0];  
+                        }  
+                        
+                        if (currentFunc.body && currentFunc.body.length == 1 && (currentFunc.body[0] !== null)) {  
+                            throw new Error("extern functions must not have a body at line " + n.lineno);  
+                        }  
+                        
+                        var missingTypes = [];  
+                        var funcChain = currentFunc;  
+                        while (funcChain) {  
+                            _.each(funcChain.args, function(arg) {  
+                                if (!arg.type) {  
+                                    missingTypes.push(arg.name);  
+                                }  
+                            });  
+                            funcChain = funcChain.parent;  
+                        }  
+                        
+                        if (missingTypes.length > 0) {  
+                            throw new Error("extern function '" + n.name + "' at line " + n.lineno +   
+                                        " has arguments without type annotations: " + missingTypes.join(", "));  
+                        }  
+                        
+                        var outermostFunc = currentFunc;  
+                        while (outermostFunc.parent) {  
+                            outermostFunc = outermostFunc.parent;  
+                        }  
+                        
+                        if (!outermostFunc.type) {  
+                            throw new Error("extern function '" + (outermostFunc.name || n.name) + "' at line " + n.lineno +   
+                                        " must have a return type annotation");  
+                        }  
+                        
+                        var externPath = ann.args[0].replace(/^`|`$/g, '');  
+                        
+                        var allArgs = [];  
+                        var funcChain = currentFunc;  
+                        while (funcChain) {  
+                            _.each(funcChain.args, function(arg) {  
+                                allArgs.unshift(new nodes.Identifier(arg.name));  
+                            });  
+                            funcChain = funcChain.parent;  
+                        }  
+                        
+                        var externCall = new nodes.Call(  
+                            new nodes.Identifier(externPath),  
+                            allArgs  
+                        );
+                        externCall.isEager = true;   
+                        
+                        currentFunc.body = [externCall];
+                    }  
+
+                
+                }  
+            }  
+        }  
+      
+    
+    
         if (n instanceof nodes.Call && n.func.value == 'export') {
             return exportType(n.args[0], env, opts.exported, opts.nodejs);
         }

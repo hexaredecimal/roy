@@ -180,12 +180,31 @@ var analyseFunction = function (functionDecl, funcType, env, nonGeneric, aliases
         newEnv[name] = whereFunctionTypeMap[name];
     }
 
-    var scopeTypes = _.map(withoutComments(functionDecl.body), function (expression) {
-        return analyse(expression, newEnv, nonGeneric, aliases, constraints);
-    });
+    var resultType;  
 
-    var resultType = scopeTypes[scopeTypes.length - 1];
+    var retType = functionDecl.type;
+    let parent = functionDecl;
+    if ((functionDecl.name == undefined || functionDecl.name == null) && functionDecl.parent) {
+        while (parent.name == undefined) 
+          parent = parent.parent;
+    }
 
+    if (!functionDecl.body[0]) {
+        let node = functionDecl;
+        while (node.lineno == undefined) 
+          node = node.parent;
+          
+        // For functions without bodies, use the annotated return type  
+        if (!parent.type) {  
+            errors.reportError(node.filename, node.lineno, node.column, "Function '" + (functionDecl.name || "<anonymous>" ) + "has no body and no return type annotation");
+        }  
+        resultType = nodeToType(parent.type, env, aliases);  
+    } else {  
+        var scopeTypes = _.map(withoutComments(functionDecl.body), function (expression) {  
+            return analyse(expression, newEnv, nonGeneric, aliases, constraints);  
+        });  
+        resultType = scopeTypes[scopeTypes.length - 1];  
+    }  
     var functionType = flattenFunctionType(types, resultType);
 
     var annotationType;

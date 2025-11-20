@@ -39,11 +39,35 @@ var grammar = {
       ["COMMENT", n("$$ = new yy.Comment($1);")]
     ],
     "statement": [
-      ["LET function", "$$ = $2;"],
-      ["LET binding", "$$ = $2;"], ,
+      ["toplevel", "$$ = $1;"],
       ["dataDecl", "$$ = $1;"],
-      ["typeDecl", "$$ = $1;"]
+      ["typeDecl", "$$ = $1;"],
+      ["annotation toplevel", "$$ = $2; $2.annotations = [$1];"]
     ],
+    "toplevel": [
+      ["LET function", "$$ = $2;"],
+      ["LET binding", "$$ = $2;"],
+    ],
+    "annotation": [
+      ["# [ annotationArgs ]", "$$ = $3;"]
+    ],
+    "annotationArgs": [
+      "annotationArg", "$$ = [$1]", 
+      "annotationArgs, annotationArg", "$$ = $1; $1.push($3);"
+    ],
+    "annotationArg": [
+      ["IDENTIFIER annotationArg2", "$$ = $2.length == 0 ? new yy.IdAnnotation($1) : new yy.FuncAnnotation($1, $2);"]
+    ],
+    "annotationArg2" : [
+      ["", "$$ = [];"],
+      ["( annotationArgValues )", "$$ = $2;"]
+    ],
+
+    "annotationArgValues" : [
+      ["STRING", "$$ = [$1]"], 
+      ["annotationArgValues , STRING", "$$ = $1; $1.push($3);"]
+    ],
+    
     "expression": [
       ["innerExpression", "$$ = $1;"],
       ["MATCH innerExpression IS caseList", n("$$ = new yy.Match($2, $4);")],
@@ -144,11 +168,15 @@ var grammar = {
     "dataParamList": typegrammar.dataParamList,
     "optDataParamList": typegrammar.optDataParamList,
 
-    "function": [
-      ["funcName paramList optType = expression optWhere", n("$$ = new yy.Function($1, $2, [$5], $3, $6);")]
-    ],
+    "function": [  
+      ["funcName paramList optType rhsValue optWhere", n("$$ = new yy.Function($1, $2, $4, $3, $5);")]  
+    ], 
     "binding": [
       ["IDENTIFIER optType = expression", n("$$ = new yy.Let($1, $4, $2);")]
+    ],
+    "rhsValue": [  
+      ["", "$$ = [null];"],  
+      ["= expression", "$$ = [$2];"]  
     ],
     'funcName': [
       ["IDENTIFIER", "$$ = $1;"],

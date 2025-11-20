@@ -35,7 +35,7 @@ exports.nodes = {
                 undefined,  // no type annotation  
                 []  // no where decls  
             );
-
+            curriedBody.parent = this;
             this.body = [curriedBody];
         } else {
             this.args = args;
@@ -427,5 +427,12 @@ exports.nodes = {
                 return a.visitObject(this);
             }
         };
+    },
+    IdAnnotation: function (name) {
+      this.name = name;
+    },
+    FuncAnnotation: function (name, args) {
+      this.name = name;
+      this.args = args;
     }
 };
