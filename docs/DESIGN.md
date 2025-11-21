@@ -1,5 +1,5 @@
 ## Introduction
-This document contains the design decisions for RoyML. 
+This document contains the design decisions for Llaml. 
 Most of these are inherited from the fork parent.
 
 ## Language Reference
@@ -124,7 +124,7 @@ Functions are curried by default . We will see an example of that later.
 ### Variables
 Variables are immutable by default.
 ```f#
-let langName = "RoyML"
+let langName = "Llaml"
 let width = 200
 let 
   var1 = 3
@@ -135,8 +135,8 @@ in var1 + var2 + var3
 
 Mutability is handled using references. A variable of type ```&'t``` can be modified.
 ```f#
-let langName = &"Roy" // Produces &String
-langName = "RoyML"
+let langName = &"Llaml" // Produces &String
+langName = "Llaml2"
 ```
 
 ### Function Currying

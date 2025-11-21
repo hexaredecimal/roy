@@ -5,6 +5,8 @@ all:
 
 dist:
 	npm run build:all
+	chmod +x dist/llml.js
+	cp dist/llml.js llml
 
 deps:
 	npm install
@@ -24,3 +26,8 @@ lint:
 
 test:
 	./node_modules/.bin/grunt jasmine
+
+clean:
+	rm -rf dist
+
+  

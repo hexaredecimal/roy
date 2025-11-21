@@ -1,4 +1,4 @@
-## RoyML
+## Llaml
 
 ## Why
 I forked the "Roy" project because the original dev gave up and I would like to use it
@@ -16,11 +16,13 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [ ] Formatter/Pretty printer (WIP)
 - [ ] Include files
 - [X] Pattern matching
-- [ ] Typed external functions
+- [X] Typed external functions
+- [X] Annotations
 - [X] Operator overloading
 - [ ] Mutability/References
 - [ ] Custom stdlib (With few external functions)
 - [X] Build binaries (Using QuickJS as the runtime)
+- [X] Let in expression
 
 ## What I aim to achieve
 ```ocaml
@@ -32,7 +34,7 @@ let add a b = sum a b
     sum a b = a + b
 
 let main = 
-  Printf.printf "{}" (add 10 10)
+  Print.print "{}" (add 10 10)
   
 ```
 
