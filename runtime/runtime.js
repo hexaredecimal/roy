@@ -99,13 +99,17 @@ const __rml_sys_list_addLast = (value) => {
     }
 }
 
+
+// Unit
+function Unit() {
+    this.$name = "Unit";
+}
+
+
 // Stddout
 function __rml_print(name) {
     console.log(name)
+    return new Unit();
 }
 
-// Unit
-const Unit = () => {
-    this.$name = "Unit";
-}
 
