@@ -3,7 +3,7 @@ const { parseArgs } = require('node:util');
 
 
 const appConfig = {
-    name: "rmlc",
+    name: "llml",
     description: "Functional language compiling to JS. Proud fork of Roy",
     commands: {
         build: {
