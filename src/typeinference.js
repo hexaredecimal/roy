@@ -50,6 +50,8 @@ var unify = function (t1, t2, node, die = true) {
     } else if (t1 instanceof t.BaseType && t2 instanceof t.BaseType) {
         var t1str = t1.aliased || t1.toString();
         var t2str = t2.aliased || t2.toString();
+
+
         if (t1.name != t2.name || t1.types.length != t2.types.length) {
             const errorMessage = "Type error: " + t1str + " is not " + t2str;
             if (!die) throw errorMessage;
@@ -1042,7 +1044,12 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             _.each(node.values, function (v, i) {
                 propTypes[i] = analyse(v, env, nonGeneric, aliases, constraints);
             });
-            return new t.TupleType(propTypes);
+
+            var typesArray = [];          
+            for (var i = 0; i < Object.keys(propTypes).length; i++) {  
+                typesArray.push(propTypes[i]);  
+            }  
+            return new t.TupleType(typesArray);  
         },
         visitObject: function () {
             var propTypes = {};
@@ -1101,6 +1108,8 @@ var nodeToType = function (n, env, aliases) {
                         return new t.StringType();
                     case 'Boolean':
                         return new t.BooleanType();
+                    case 'Unit':
+                        return new t.UnitType();
                 }
             }
 
