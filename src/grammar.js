@@ -53,7 +53,7 @@ var grammar = {
     ],
     "annotationArgs": [
       "annotationArg", "$$ = [$1]", 
-      "annotationArgs, annotationArg", "$$ = $1; $1.push($3);"
+      "annotationArgs , annotationArg", "$$ = $1; $1.push($3);"
     ],
     "annotationArg": [
       ["IDENTIFIER annotationArg2", "$$ = $2.length == 0 ? new yy.IdAnnotation($1) : new yy.FuncAnnotation($1, $2);"]
