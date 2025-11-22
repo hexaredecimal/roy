@@ -1251,10 +1251,22 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             return new t.BooleanType();
         },
         visitArray: function () {
-            var valueType = new t.Variable();
-            _.each(node.values, function (v) {
-                unify(valueType, analyse(v, env, nonGeneric, aliases, constraints), v);
-            });
+            var valueType = new t.Variable();  
+            var allSameType = true;  
+            
+            _.each(node.values, function (v) {  
+                try {  
+                    var elemType = analyse(v, env, nonGeneric, aliases, constraints);  
+                    unify(valueType, elemType, v, false);  
+                } catch (e) {  
+                    allSameType = false;  
+                }  
+            });  
+            
+            if (!allSameType) {  
+                return new t.ArrayType(new t.NativeType());  
+            }  
+            
             return new t.ArrayType(valueType);
         },
         visitTuple: function () {
@@ -1328,6 +1340,8 @@ var nodeToType = function (n, env, aliases) {
                         return new t.BooleanType();
                     case 'Unit':
                         return new t.UnitType();
+                    case 'Any':
+                        return new t.NativeType();
                 }
             }
 
