@@ -13,6 +13,10 @@ const __op_sub_Number_Number_Number = (a) => {
     }
 }
 
+const __op_sub_Number_Number = (a) => {
+    return -a;
+}
+
 const __op_mul_Number_Number_Number = (a) => {
     return (b) => {
         return a * b;
@@ -104,6 +108,17 @@ const __rml_sys_list_addLast = (value) => {
 function Unit() {
     this.$name = "Unit";
 }
+
+// Utils
+
+function __rml_toString(value) {
+  return String(value)
+}
+
+function __rml_string_size(str) {
+  return str.length;
+}
+
 
 
 // Stddout
