@@ -148,6 +148,52 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 body: ensureJsASTStatements(nodes)
             };
         },
+        visitImportIntoModule: function () {  
+            // Convert module path to relative file path  
+            // e.g., ["Std", "Print"] -> "./std/print"  
+            var modulePath = './tmp/' + n.path.join('.') + ".js";  
+            
+            if (n.liftedIds && n.liftedIds.length > 0) {  
+                // Selective import: import {print, println} from "./std/print"  
+                return {  
+                    type: "ImportDeclaration",  
+                    specifiers: _.map(n.liftedIds, function(id) {  
+                        return {  
+                            type: "ImportSpecifier",  
+                            imported: {  
+                                type: "Identifier",  
+                                name: id  
+                            },  
+                            local: {  
+                                type: "Identifier",  
+                                name: id  
+                            }  
+                        };  
+                    }),  
+                    source: {  
+                        type: "Literal",  
+                        value: modulePath  
+                    }  
+                };  
+            } else {  
+                // Namespace import: import * as Print from "./std/print"  
+                var moduleName = n.path[n.path.length - 1];  
+                return {  
+                    type: "ImportDeclaration",  
+                    specifiers: [{  
+                        type: "ImportNamespaceSpecifier",  
+                        local: {  
+                            type: "Identifier",  
+                            name: moduleName  
+                        }  
+                    }],  
+                    source: {  
+                        type: "Literal",  
+                        value: modulePath  
+                    }  
+                };  
+            }  
+        },
         // Function definition to JavaScript function.
         visitFunction: function () {
             var body = {
@@ -186,18 +232,28 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             if (!n.name) {
                 return func;
             }
-            return {
-                type: "VariableDeclaration",
-                kind: "var",
-                declarations: [{
-                    type: "VariableDeclarator",
-                    id: {
-                        type: "Identifier",
-                        name: n.mangledName || n.name
-                    },
-                    init: func
-                }]
-            };
+            var declaration = {  
+                type: "VariableDeclaration",  
+                kind: "const",  // Use const for exports  
+                declarations: [{  
+                    type: "VariableDeclarator",  
+                    id: {  
+                        type: "Identifier",  
+                        name: n.mangledName || n.name  
+                    },  
+                    init: func  
+                }]  
+            };  
+            if (n.isExport) {  
+                return {  
+                    type: "ExportNamedDeclaration",  
+                    declaration: declaration,  
+                    specifiers: [],  
+                    source: null  
+                };  
+            }  
+            
+            return declaration;  
         },
         visitIfThenElse: function () {
             var ifTrue = _.map(splitComments(n.ifTrue), compileNode);
@@ -1138,11 +1194,13 @@ var compile = function (source, env, aliases, opts) {
     ast.body = _.map(ast.body, function (n) {
 
         if (n.annotations && n.annotations.length > 0) {  
+           var shouldExport = false; 
             for (var i = 0; i < n.annotations.length; i++) {  
-                var ann = n.annotations[i];  
+                var ann = n.annotations[i];
+                
                 if (ann instanceof nodes.IdAnnotation) {  
                     if (ann.name === 'export') {  
-                        return exportType(n, env, opts.exported, opts.nodejs);  
+                        n.isExport = true;
                     }  
                     if (ann.name === 'async') {  
                         n.isAsync = true;  
@@ -1150,7 +1208,6 @@ var compile = function (source, env, aliases, opts) {
                 }  
                 
                 if (ann instanceof nodes.FuncAnnotation) {
-                                
                     if (ann.name === 'extern') {  
                         // Validate it's a Function node  
                         if (!(n instanceof nodes.Function)) {  

@@ -27,7 +27,7 @@ var getFileContents = function (filename) {
 
     filenames = /\..+$/.test(filename) ? // if an extension is specified,
         [filename] :             // don't bother checking others
-        _.map(["", ".rml", ".js"], function (ext) {
+        _.map([".lml", ".js"], function (ext) {
             return filename + ext;
         });
 
@@ -74,7 +74,7 @@ var nodeRepl = function (opts) {
     console.log(":? for help");
 
     var fs = require('fs');
-    var prelude = fs.readFileSync(path.dirname(__dirname) + '/lib/prelude.roy', 'utf8');
+    var prelude = getFileContents(path.dirname(__dirname) + '/lib/prelude.lml');
     vm.runInNewContext(compile(prelude, env, {}, { nodejs: true }).output, sandbox, 'eval');
     repl.setPrompt('> ');
     repl.on('close', function () {
@@ -223,7 +223,7 @@ var runRoy = function (argv, opts) {
     var path = require('path');
     var vm = require('vm');
 
-    var extensions = /\.rml$/;
+    var extensions = /\.lml$/;
 
     var exported;
     var env = {};
@@ -247,7 +247,8 @@ var runRoy = function (argv, opts) {
             sourceMap: sourceMap
         });
         let output = `${compiled.output}\n`
-        if (output.includes("var main = function")) {
+        if (output.includes("const main = function")) {
+            
             output += `\nmain();\n`
         }
         const proc = require("child_process")
@@ -269,7 +270,7 @@ var runRoy = function (argv, opts) {
             } else if (opts.exe) {
                 fs.writeFileSync(outputPath, output);
                 var binaryPath = filename.replace(extensions, '');
-                cmd(`qjsc -o ${binaryPath} ${outputPath}`);
+                cmd(`qjsc -m -o ${binaryPath} ${outputPath}`);
                 fs.unlinkSync(outputPath); 
             }
         }

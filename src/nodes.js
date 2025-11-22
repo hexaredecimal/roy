@@ -434,5 +434,14 @@ exports.nodes = {
     FuncAnnotation: function (name, args) {
       this.name = name;
       this.args = args;
+    },
+    importIntoModule: function (path, liftedIds = null) {
+      this.path = path;
+      this.liftedIds = liftedIds;
+      this.accept = function (a) {  
+            if (a.visitImportIntoModule) {  
+                return a.visitImportIntoModule(this);  
+            }  
+      }; 
     }
 };

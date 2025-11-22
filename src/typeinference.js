@@ -8,6 +8,8 @@
 // Type variable and built-in types are defined in the `types` module.
 var t = require('./types'),
     n = require('./nodes').nodes,
+    lexer = require('./lexer'),
+    parser = require('../lib/parser').parser,
     _ = require('underscore'),
     getFreeVariables = require('./freeVariables').getFreeVariables,
     stronglyConnectedComponents = require('./tarjan').stronglyConnectedComponents;
@@ -409,6 +411,140 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
         // We create temporary types for recursive definitions.
         visitUnit: function () {
             return new t.UnitType();
+        },
+        visitImportIntoModule: function() {
+  
+            var fs = require('fs');  
+            var path = require('path');  
+            
+            // Convert path array to file path (e.g., ["Std", "Io"] -> "std/io")  
+            var modulePath = node.path.map(p => p.toLowerCase()).join('/');  
+
+            // Check cache to avoid cyclic imports  
+            if (!env.$importCache) {  
+                env.$importCache = {};  
+            }  
+
+            const getExports = (body) => {
+                let exportedSymbols = {};  
+                _.each(body, function(node) {  
+                    if (node.annotations && node.annotations.length > 0) {  
+                        var hasExport = _.some(node.annotations, function(ann) {  
+                            return ann instanceof n.IdAnnotation && ann.name === 'export';  
+                        });  
+                        if (hasExport) {  
+                            var name = node.name;  
+                            if (name) { 
+                                exportedSymbols[name] = moduleEnv[name];  
+                            }  
+                        }  
+                    }  
+                });  
+                return exportedSymbols;
+            };
+            
+            // Try to find the file  
+            var filePath = modulePath + '.lml';  
+            if (!fs.existsSync(filePath)) {  
+                errors.reportError(  
+                    node.filename,  
+                    node.lineno,  
+                    node.column,  
+                    "Module not found: " + modulePath  
+                );  
+            } 
+            
+            // Load and parse the module 
+            var rtSources = fs.readFileSync("./runtime/runtime.js", 'utf8');
+            var source = fs.readFileSync(filePath, 'utf8');  
+            var tokens = lexer.tokenise(source, { filename: filePath });  
+            var moduleAst = parser.parse(tokens);  
+
+            if (env.$importCache[modulePath]) {  
+                let exportedSymbols = getExports(moduleAst.body);
+
+                if (node.liftedIds && node.liftedIds.length > 0) {    
+                    // Selective import: open Std.IO.{print, println}    
+                    _.each(node.liftedIds, function(liftedId) {    
+                        if (!exportedSymbols[liftedId]) {    
+                            errors.reportError(    
+                                node.filename,    
+                                node.lineno,    
+                                node.column,    
+                                "Symbol '" + liftedId + "' is not exported from module " + modulePath    
+                            );    
+                        }    
+                        env[liftedId] = exportedSymbols[liftedId];  
+                    });  
+                    
+                    // Remove namespace if it exists from a previous import  
+                    var moduleName = node.path[node.path.length - 1];  
+                    if (env[moduleName] instanceof t.ObjectType) {  
+                        delete env[moduleName];  
+                    }  
+                } else {    
+                    // Namespace import: open Std.IO    
+                    var moduleName = node.path[node.path.length - 1];    
+                    env[moduleName] = new t.ObjectType(exportedSymbols);    
+                }
+                return new t.UnitType();
+            } 
+            
+            // Create new environment for the module  
+            var moduleEnv = {};
+            setUpEnv(moduleEnv)  
+            var moduleAliases = {};  
+            
+            var compileModule = require('./compile').compile;  
+            var compiled = compileModule(source, moduleEnv, moduleAliases, {  
+                filename: filePath,  
+                nodejs: true,  
+                exported: {}  
+            });  
+
+            env.$importCache[modulePath] = true
+
+
+            // Create tmp directory if it doesn't exist  
+            var tmpDir = path.join(process.cwd(), 'tmp');  
+            if (!fs.existsSync(tmpDir)) {  
+                fs.mkdirSync(tmpDir, { recursive: true });  
+            }  
+            
+            // Generate output filename using dot-separated path (e.g., "Std.Io.js")  
+            var outputFileName = node.path.join('.') + '.js';  
+            var outputPath = path.join(tmpDir, outputFileName);  
+            
+            // Write compiled JavaScript to tmp folder  
+            fs.writeFileSync(outputPath, rtSources + "\n\n" + compiled.output);  
+
+            let exportedSymbols = getExports(moduleAst.body);
+
+            if (node.liftedIds && node.liftedIds.length > 0) {    
+                // Selective import: open Std.IO.{print, println}    
+                _.each(node.liftedIds, function(liftedId) {    
+                    if (!exportedSymbols[liftedId]) {    
+                        errors.reportError(    
+                            node.filename,    
+                            node.lineno,    
+                            node.column,    
+                            "Symbol '" + liftedId + "' is not exported from module " + modulePath    
+                        );    
+                    }    
+                    env[liftedId] = exportedSymbols[liftedId];  
+                });  
+                
+                // Remove namespace if it exists from a previous import  
+                var moduleName = node.path[node.path.length - 1];  
+                if (env[moduleName] instanceof t.ObjectType) {  
+                    delete env[moduleName];  
+                }  
+            } else {    
+                // Namespace import: open Std.IO    
+                var moduleName = node.path[node.path.length - 1];    
+                env[moduleName] = new t.ObjectType(exportedSymbols);    
+            }
+            return new t.UnitType();  
         },
         visitFunction: function () {
 
@@ -1217,129 +1353,129 @@ var solveTypeClassConstraint = function (constraint, env, unsolvedCallback) {
     unsolvedCallback(instanceTypeClass);
 };
 
-// Run inference on an array of AST nodes.
-var typecheck = function (ast, env, aliases, opts) {
-    currentFile = opts.filename;
-    if (!env.$operators) {
-        env.$operators = {
-            binary: {},
-            unary: {}
-        };
-
-
-        // Add built-in binary operators  
-        var NumberType = new t.NumberType();
-        var StringType = new t.StringType();
-        var BooleanType = new t.BooleanType();
-
-        // Arithmetic operators  
-        env.$operators.binary['++'] = [
-            {
-                types: [StringType, StringType, StringType],
-                name: '++',
-                type: new t.FunctionType([StringType, StringType, StringType]),
-                builtin: true
-            }
-        ];
-
-        env.$operators.binary['+'] = [
-            {
-                types: [NumberType, NumberType, NumberType],
-                name: '+',
-                type: new t.FunctionType([NumberType, NumberType, NumberType]),
-                builtin: true
-            }
-        ];
-
-
-
-        env.$operators.binary['-'] = [{
-            types: [NumberType, NumberType, NumberType],
-            name: '-',
-            type: new t.FunctionType([NumberType, NumberType, NumberType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['*'] = [{
-            types: [NumberType, NumberType, NumberType],
-            name: '*',
-            type: new t.FunctionType([NumberType, NumberType, NumberType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['/'] = [{
-            types: [NumberType, NumberType, NumberType],
-            name: '/',
-            type: new t.FunctionType([NumberType, NumberType, NumberType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['%'] = [{
-            types: [NumberType, NumberType, NumberType],
-            name: '%',
-            type: new t.FunctionType([NumberType, NumberType, NumberType]),
-            builtin: true
-        }];
-
-
-        // Comparison operators  
-        env.$operators.binary['<'] = [{
-            types: [NumberType, NumberType, BooleanType],
-            name: '<',
-            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['>'] = [{
-            types: [NumberType, NumberType, BooleanType],
-            name: '>',
-            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
-            builtin: true
-        }];
-
-        // Unary operators  
-        env.$operators.unary['!'] = [{
-            types: [BooleanType, BooleanType],
-            name: '!',
-            type: new t.FunctionType([BooleanType, BooleanType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['=='] = [{
-            types: [new t.Variable(), new t.Variable(), BooleanType],
-            name: '==',
-            type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['!='] = [{
-            types: [new t.Variable(), new t.Variable(), BooleanType],
-            name: '!=',
-            type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
-            builtin: true
-        }];
-        env.$operators.binary['<='] = [{
-            types: [NumberType, NumberType, BooleanType],
-            name: '<=',
-            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['>='] = [{
-            types: [NumberType, NumberType, BooleanType],
-            name: '>=',
-            type: new t.FunctionType([NumberType, NumberType, BooleanType]),
-            builtin: true
-        }];
-
-        env.$operators.binary['@'] = [{
-            types: [],
-            name: '@',
-            type: new t.FunctionType([new t.ArrayType(new t.Variable()), NumberType, new t.Variable()]),
-            builtin: true
-        }];
-
+var setUpEnv = function(env) {
+    
+    if (!env.$importCache) {  
+        env.$importCache = {};  
     }
+
+    env.$operators = {
+        binary: {},
+        unary: {}
+    };
+
+    // Add built-in binary operators  
+    var NumberType = new t.NumberType();
+    var StringType = new t.StringType();
+    var BooleanType = new t.BooleanType();
+
+    // Arithmetic operators  
+    env.$operators.binary['++'] = [
+        {
+            types: [StringType, StringType, StringType],
+            name: '++',
+            type: new t.FunctionType([StringType, StringType, StringType]),
+            builtin: true
+        }
+    ];
+
+    env.$operators.binary['+'] = [
+        {
+            types: [NumberType, NumberType, NumberType],
+            name: '+',
+            type: new t.FunctionType([NumberType, NumberType, NumberType]),
+            builtin: true
+        }
+    ];
+
+
+
+    env.$operators.binary['-'] = [{
+        types: [NumberType, NumberType, NumberType],
+        name: '-',
+        type: new t.FunctionType([NumberType, NumberType, NumberType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['*'] = [{
+        types: [NumberType, NumberType, NumberType],
+        name: '*',
+        type: new t.FunctionType([NumberType, NumberType, NumberType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['/'] = [{
+        types: [NumberType, NumberType, NumberType],
+        name: '/',
+        type: new t.FunctionType([NumberType, NumberType, NumberType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['%'] = [{
+        types: [NumberType, NumberType, NumberType],
+        name: '%',
+        type: new t.FunctionType([NumberType, NumberType, NumberType]),
+        builtin: true
+    }];
+
+
+    // Comparison operators  
+    env.$operators.binary['<'] = [{
+        types: [NumberType, NumberType, BooleanType],
+        name: '<',
+        type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['>'] = [{
+        types: [NumberType, NumberType, BooleanType],
+        name: '>',
+        type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+        builtin: true
+    }];
+
+    // Unary operators  
+    env.$operators.unary['!'] = [{
+        types: [BooleanType, BooleanType],
+        name: '!',
+        type: new t.FunctionType([BooleanType, BooleanType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['=='] = [{
+        types: [new t.Variable(), new t.Variable(), BooleanType],
+        name: '==',
+        type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['!='] = [{
+        types: [new t.Variable(), new t.Variable(), BooleanType],
+        name: '!=',
+        type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
+        builtin: true
+    }];
+    env.$operators.binary['<='] = [{
+        types: [NumberType, NumberType, BooleanType],
+        name: '<=',
+        type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['>='] = [{
+        types: [NumberType, NumberType, BooleanType],
+        name: '>=',
+        type: new t.FunctionType([NumberType, NumberType, BooleanType]),
+        builtin: true
+    }];
+
+    env.$operators.binary['@'] = [{
+        types: [],
+        name: '@',
+        type: new t.FunctionType([new t.ArrayType(new t.Variable()), NumberType, new t.Variable()]),
+        builtin: true
+    }];
+
 
     env['__rml_sys_list_addFirst'] = new t.FunctionType([
         new t.Variable(),
@@ -1356,12 +1492,28 @@ var typecheck = function (ast, env, aliases, opts) {
         new t.Variable(),
         new t.UnitType()
     ]);
+    env['__rml_println'] = new t.FunctionType([
+        new t.Variable(),
+        new t.UnitType()
+    ]);
+    
+    env['__rml_printf'] = new t.FunctionType([
+        new t.StringType(),
+        new t.TupleType(new t.Variable()),
+        new t.UnitType()
+    ]);
+
     env['exit'] = new t.FunctionType([
         new t.NumberType(),
         new t.UnitType()
     ]);
 
+}
 
+// Run inference on an array of AST nodes.
+var typecheck = function (ast, env, aliases, opts) {
+    currentFile = opts.filename;
+    setUpEnv(env)
     var types = _.map(ast, function (node) {
         try {
 

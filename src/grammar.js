@@ -34,15 +34,30 @@ var grammar = {
       ["body line", "$$ = $1; $1.push($2);"],
     ],
     "line": [
+      ["openModule", "$$ = $1;"],
       ["statement", "$$ = $1;"],
-      ["expression", "$$ = $1;"],
       ["COMMENT", n("$$ = new yy.Comment($1);")]
+    ],
+    "openModule": [
+      ["OPEN importPATH liftOrNot", n("$$ = $3 == null ? new yy.importIntoModule($2) : new yy.importIntoModule($2, $3);")],
+    ],
+    "liftOrNot": [
+      ["", "$$ = null;"],
+      ["( importLiftedIds )", "$$ = $2;"]
+    ],
+    "importPATH": [
+      ["IDENTIFIER", "$$ = [$1];"],
+      ["importPATH . IDENTIFIER", "$$ = $1; $$.push($3);"],
+    ],
+    "importLiftedIds": [
+      ["IDENTIFIER", "$$ = [$1];"],
+      ["importPATH , IDENTIFIER", "$$ = $1; $$.push($3);"],
     ],
     "statement": [
       ["toplevel", "$$ = $1;"],
       ["dataDecl", "$$ = $1;"],
       ["typeDecl", "$$ = $1;"],
-      ["annotation toplevel", "$$ = $2; $2.annotations = [$1];"]
+      ["annotation toplevel", "$$ = $2; $2.annotations = $1;"]
     ],
     "toplevel": [
       ["LET function", "$$ = $2;"],
@@ -52,8 +67,8 @@ var grammar = {
       ["# [ annotationArgs ]", "$$ = $3;"]
     ],
     "annotationArgs": [
-      "annotationArg", "$$ = [$1]", 
-      "annotationArgs , annotationArg", "$$ = $1; $1.push($3);"
+      ["annotationArg", "$$ = [$1]"], 
+      ["annotationArgs , annotationArg", "$$ = $1; $1.push($3);"]
     ],
     "annotationArg": [
       ["IDENTIFIER annotationArg2", "$$ = $2.length == 0 ? new yy.IdAnnotation($1) : new yy.FuncAnnotation($1, $2);"]
