@@ -11,10 +11,10 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [X] Function currying
 - [X] Structural typing (WIP)
 - [X] Cli Improvements
-- [ ] Modules
+- [X] Modules
 - [X] Proper error messages
 - [ ] Formatter/Pretty printer (WIP)
-- [ ] Include files
+- [X] Include files
 - [X] Pattern matching
 - [X] Typed external functions
 - [X] Annotations
@@ -22,7 +22,7 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [ ] Mutability/References
 - [ ] Custom stdlib (With few external functions)
 - [X] Build binaries (Using QuickJS as the runtime)
-- [X] Let in expression
+- [] Let in expression
 
 ## What I aim to achieve
 ```ocaml
