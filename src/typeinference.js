@@ -434,7 +434,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 });
             };
             
-            const getExports = (body) => {  
+            const getExports = (body, moduleEnv) => {  
                 let exportedSymbols = {};    
                 _.each(body, function(astNode) {    
                     if (astNode.annotations && astNode.annotations.length > 0) {    
@@ -500,7 +500,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
             if (env.$importCache[modulePath]) { 
                 const moduleAst = env.$importCache[modulePath].ast;
-                let exportedSymbols = getExports(moduleAst.body);
+                const moduleEnv = env.$importCache[modulePath].env;
+                let exportedSymbols = getExports(moduleAst.body, moduleEnv);
 
                 if (node.liftedIds && node.liftedIds.length > 0) {    
                     // Selective import: open Std.IO.{print, println}    
@@ -535,14 +536,14 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             if (!fs.existsSync(tmpDir)) {  
                 fs.mkdirSync(tmpDir, { recursive: true });  
             }  
-            var moduleEnv = {};
+            let moduleEnv = {};
             setUpEnv(moduleEnv)  
-            var moduleAliases = {};  
-            var rtSources = fs.readFileSync("./runtime/runtime.js", 'utf8');
-            var source = fs.readFileSync(filePath, 'utf8'); 
+            let moduleAliases = {};  
+            let rtSources = fs.readFileSync("./runtime/runtime.js", 'utf8');
+            let source = fs.readFileSync(filePath, 'utf8'); 
 
-            var compileModule = require('./compile').compile;  
-            var compiled = compileModule(source, moduleEnv, moduleAliases, {  
+            let compileModule = require('./compile').compile;  
+            let compiled = compileModule(source, moduleEnv, moduleAliases, {  
                 filename: filePath,  
                 nodejs: true,  
                 exported: {},
@@ -557,7 +558,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             // Write compiled JavaScript to tmp folder  
             fs.writeFileSync(outputPath, rtSources + "\n\n" + compiled.output);  
 
-            let exportedSymbols = getExports(moduleAst.body);
+            let exportedSymbols = getExports(moduleAst.body, moduleEnv);
             env.$importCache[modulePath] = {  
                 env: moduleEnv,  
                 exports: exportedSymbols,  
@@ -566,8 +567,8 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
 
             if (node.liftedIds && node.liftedIds.length > 0) {
-                _.each(node.liftedIds, function(liftedId) {      
-                    if (!exportedSymbols[liftedId]) {      
+                _.each(node.liftedIds, function(liftedId) {
+                    if (!exportedSymbols[liftedId]) { 
                         errors.reportError(      
                             node.filename,      
                             node.lineno,      
@@ -1123,12 +1124,15 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         });
                     },
                     visitTuple: function () {
-                        var propTypes = {};
-                        _.each(pattern.values, function (elemPattern, i) {
-                            propTypes[i] = new t.Variable();
-                            handlePatternBinding(elemPattern, propTypes[i], env, nonGeneric);
-                        });
-                        unify(expectedType, new t.TupleType(propTypes), pattern);
+                        var tupleType = new t.TupleType(  
+                            pattern.values.map(() => new t.Variable())  
+                        );  
+                        unify(expectedType, tupleType, pattern);  
+                        
+                        _.each(pattern.values, function (elemPattern, i) {  
+                            var elemType = t.prune(tupleType.types[i]);  
+                            handlePatternBinding(elemPattern, elemType, env, nonGeneric);  
+                        });  
                     },
                     visitObject: function () {
                         var propTypes = {};

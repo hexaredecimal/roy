@@ -1006,6 +1006,18 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 };
             });
 
+            pathConditions.push({  
+                type: "ThrowStatement",  
+                argument: {  
+                    type: "NewExpression",  
+                    callee: { type: "Identifier", name: "Error" },  
+                    arguments: [{  
+                        type: "Literal",  
+                        value: "Non-exhaustive pattern match"  
+                    }]  
+                }  
+            });  
+
             return {
                 type: "CallExpression",
                 "arguments": [compileNode(n.value)],
