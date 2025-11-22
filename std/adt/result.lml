@@ -7,4 +7,15 @@ let unwrap r =
   when r is
     | Ok v = v
 
-    
+#[export]
+let unwrapOr a r =
+  when r is
+    | Ok v = v
+    | _ = a
+
+#[export]
+let unwrapOrElse f r =
+  when r is
+    | Ok v = v
+    | _ = f r
+

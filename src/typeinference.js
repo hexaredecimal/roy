@@ -1478,6 +1478,14 @@ var setUpEnv = function(env) {
         type: new t.FunctionType([NumberType, NumberType, NumberType]),
         builtin: true
     }];
+    env.$operators.unary['-'] = [{
+        types: [NumberType, NumberType],
+        name: '-',
+        type: new t.FunctionType([NumberType, NumberType]),
+        builtin: true
+    }];
+
+
 
     env.$operators.binary['*'] = [{
         types: [NumberType, NumberType, NumberType],

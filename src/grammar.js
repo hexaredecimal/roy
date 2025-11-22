@@ -91,7 +91,6 @@ var grammar = {
     "callArgument": [
       ["( expression )", n("$$ = $2;")],
       ["( opName )", n("$$ = new yy.Identifier($2);")],
-      ["! ( expression )", n("$$ = new yy.UnaryBooleanOperator($1, $3);")],
       ["accessor", "$$ = $1;"],
       ["innerExpression @ innerExpression", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["innerExpression MATH innerExpression", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
@@ -108,9 +107,14 @@ var grammar = {
       ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
       ["literal", "$$ = $1;"]
     ],
+    "unaryExpression": [
+      ["opName literal", n("$$ = new yy.Call(new yy.Identifier($1), [$2]);")],
+      ["opName call", n("$$ = new yy.Call(new yy.Identifier($1), [$2]);")],
+    ],
     "innerExpression": [
       ["callArgument", "$$ = $1;"],
-      ["call", "$$ = $1;"]
+      ["call", "$$ = $1;"],
+      ["unaryExpression", "$$ = $1;"],
     ],
     "caseList": [
       ["| pattern = expression", "$$ = [new yy.Case($2, $4)];"],

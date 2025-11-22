@@ -13,7 +13,7 @@ var IDENTIFIER = new RegExp(
     unicode.ECMA.identifier.source.replace('\\u03BB', '')
 );
 
-var NUMBER = /^-?[0-9]+(\.[0-9]+)?([eE][\-\+]?[0-9]+)?/;
+var NUMBER = /^[0-9]+(\.[0-9]+)?([eE][\-\+]?[0-9]+)?/;
 var STRING = /^"(?:[^"\\]|\\[\s\S])*"/;
 var WHITESPACE = /^[^\n\S]+/;
 var INDENT = /^(?:\n[^\n\S]*)+/;
