@@ -1233,7 +1233,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             };
         },
         visitNumber: function () {
-            var rawValue = n.value;
+            var rawValue = n.value.replace(/_/g, '');  ;
             var numValue;  
             if (rawValue.startsWith('0x') || rawValue.startsWith('0X')) {  
                 numValue = parseInt(rawValue, 16);  
