@@ -1570,21 +1570,6 @@ var setUpEnv = function(env) {
         new t.ArrayType(new t.Variable())
     ]);
 
-    env['__rml_print'] = new t.FunctionType([
-        new t.Variable(),
-        new t.UnitType()
-    ]);
-    env['__rml_println'] = new t.FunctionType([
-        new t.Variable(),
-        new t.UnitType()
-    ]);
-    
-    env['__rml_printf'] = new t.FunctionType([
-        new t.StringType(),
-        new t.TupleType(new t.Variable()),
-        new t.UnitType()
-    ]);
-
     env['exit'] = new t.FunctionType([
         new t.NumberType(),
         new t.UnitType()

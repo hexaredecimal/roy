@@ -429,7 +429,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         },
         // Let binding to JavaScript variable.
         visitLet: function () {
-            return {
+            const declaration = {
                 type: "VariableDeclaration",
                 kind: "const",
                 declarations: [{
@@ -441,6 +441,16 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     init: compileNode(n.value)
                 }]
             };
+            if (n.isExport) {  
+                return {  
+                    type: "ExportNamedDeclaration",  
+                    declaration: declaration,  
+                    specifiers: [],  
+                    source: null  
+                };  
+            }  
+
+            return declaration
         },
         visitInstance: function () {
             return {
