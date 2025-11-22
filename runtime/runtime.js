@@ -107,8 +107,64 @@ function Unit() {
 
 
 // Stddout
-function __rml_print(name) {
-    console.log(name)
+function __rml_print(value) {
+    std.out.puts(String(value))
+    return new Unit();
+}
+
+function __rml_println(value) {
+    console.log(value)
+    return new Unit();
+}
+
+function __rml_printf(format, args) {
+    let out = "";
+    let i = 0;   // position in format string
+    let arg = 0; // argument index
+
+    while (i < format.length) {
+        let c = format[i];
+
+        if (c === "{") {
+            // Escaped {{
+            if (format[i + 1] === "{") {
+                out += "{";
+                i += 2;
+                continue;
+            }
+
+            // Placeholder {}
+            if (format[i + 1] === "}") {
+                if (arg >= args.length) {
+                    throw new Error("Not enough arguments for format string");
+                }
+                out += String(args[arg++]);
+                i += 2;
+                continue;
+            }
+
+            // Single { is illegal
+            throw new Error("Unmatched '{' in format string");
+        }
+
+        if (c === "}") {
+            // Escaped }}
+            if (format[i + 1] === "}") {
+                out += "}";
+                i += 2;
+                continue;
+            }
+
+            // Single } is illegal
+            throw new Error("Unmatched '}' in format string");
+        }
+
+        // Normal char
+        out += c;
+        i++;
+    }
+
+    console.log(out);
     return new Unit();
 }
 
