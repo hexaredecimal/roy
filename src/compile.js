@@ -1,4 +1,4 @@
-var typecheck = require('./typeinference').typecheck,
+var typeinference = require('./typeinference'),
     loadModule = require('./modules').loadModule,
     exportType = require('./modules').exportType,
     types = require('./types'),
@@ -10,6 +10,8 @@ var typecheck = require('./typeinference').typecheck,
     escodegen = require('escodegen'),
     _ = require('underscore');
 
+
+var typecheck = typeinference.typecheck;
 // Assigning the nodes to `parser.yy` allows the grammar to access the nodes from
 // the `yy` namespace.
 parser.yy = typeparser.yy = nodes;
@@ -143,56 +145,172 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         // Top level file
         visitModule: function () {
             var nodes = _.map(splitComments(n.body), compileNode);
+            nodes = _.flatten(nodes);  
             return {
                 type: "Program",
                 body: ensureJsASTStatements(nodes)
             };
         },
-        visitImportIntoModule: function () {  
-            // Convert module path to relative file path  
-            // e.g., ["Std", "Print"] -> "./std/print"  
+        visitImportIntoModule: function () {
             var modulePath = './tmp/' + n.path.join('.') + ".js";  
+            var modulePathKey = n.path.map(p => p.toLowerCase()).join('/');  
             
-            if (n.liftedIds && n.liftedIds.length > 0) {  
-                // Selective import: import {print, println} from "./std/print"  
-                return {  
-                    type: "ImportDeclaration",  
-                    specifiers: _.map(n.liftedIds, function(id) {  
-                        return {  
-                            type: "ImportSpecifier",  
-                            imported: {  
-                                type: "Identifier",  
-                                name: id  
-                            },  
-                            local: {  
-                                type: "Identifier",  
-                                name: id  
-                            }  
-                        };  
-                    }),  
-                    source: {  
-                        type: "Literal",  
-                        value: modulePath  
-                    }  
-                };  
-            } else {  
-                // Namespace import: import * as Print from "./std/print"  
-                var moduleName = n.path[n.path.length - 1];  
-                return {  
-                    type: "ImportDeclaration",  
-                    specifiers: [{  
-                        type: "ImportNamespaceSpecifier",  
-                        local: {  
-                            type: "Identifier",  
-                            name: moduleName  
-                        }  
-                    }],  
-                    source: {  
-                        type: "Literal",  
-                        value: modulePath  
-                    }  
-                };  
+            // Get cached module info  
+            var cached = env.$importCache && env.$importCache[modulePathKey]   
+                ? env.$importCache[modulePathKey]   
+                : null;  
+            
+            if (!cached) {  
+                // Module not loaded - shouldn't happen if typecheck ran first  
+                return [];  
             }  
+            
+            // Helper to check if name is operator  
+            var operatorChars = '+-*/%<>=!|&?@:';  
+            var isOperator = function(name) {  
+                return name.split('').every(function(c) {  
+                    return operatorChars.includes(c);  
+                });  
+            };  
+            
+            if (n.liftedIds && n.liftedIds.length > 0) {
+
+                var specifiers = [];  
+                var typeComments = [];  
+                
+                _.each(n.liftedIds, function(id) {  
+                    var exportedSymbol = cached.exports[id];  
+                    
+                    if (!exportedSymbol) {  
+                        return;  
+                    }  
+
+                    if (isOperator(id)) {      
+                        var overloads = exportedSymbol;  
+                        _.each(overloads, function(overload) {      
+                            var mangledName = '__op_' +      
+                                typeinference.encodeOperatorName(id) +      
+                                '_' +      
+                                overload.types.map(function(t) {      
+                                    return typeinference.sanitizeTypeName(t.toString());      
+                                }).join('_');      
+                            
+                            specifiers.push({      
+                                type: "ImportSpecifier",      
+                                imported: { type: "Identifier", name: mangledName },      
+                                local: { type: "Identifier", name: mangledName }      
+                            });      
+                        });  
+                    }
+                      
+                    else if (exportedSymbol.aliased) {  
+                        typeComments.push({  
+                            type: "Line",  
+                            value: " Type alias: " + id + " = " + exportedSymbol.toString()  
+                        });  
+                    }  
+                    else if (exportedSymbol instanceof types.TagType) {  
+                        typeComments.push({  
+                            type: "Line",  
+                            value: " ADT type: " + id  
+                        });  
+                        
+                        _.each(cached.exports, function(sym, symName) {  
+                            if (sym instanceof types.FunctionType &&   
+                                sym.types[sym.types.length - 1].toString().indexOf(id) === 0) {  
+                                specifiers.push({  
+                                    type: "ImportSpecifier",  
+                                    imported: { type: "Identifier", name: symName },  
+                                    local: { type: "Identifier", name: symName }  
+                                });  
+                            }  
+                        });  
+                    }  
+                    else {      
+                        specifiers.push({      
+                            type: "ImportSpecifier",      
+                            imported: { type: "Identifier", name: id },      
+                            local: { type: "Identifier", name: id }      
+                        });      
+                    }      
+                });  
+                
+                var result = {        
+                    type: "ImportDeclaration",        
+                    specifiers: specifiers,      
+                    source: {        
+                        type: "Literal",        
+                        value: modulePath        
+                    }        
+                };  
+                
+                if (typeComments.length > 0) {  
+                    result.leadingComments = typeComments;  
+                }  
+                
+                return result;  
+
+
+            
+            } else {  
+                var moduleName = n.path[n.path.length - 1];    
+                var operatorSpecifiers = [];    
+                
+                // Only iterate through THIS module's exported operators  
+                _.each(cached.exports, function(symbolType, symbolName) {  
+                    if (isOperator(symbolName) && Array.isArray(symbolType)) {  
+                        _.each(symbolType, function(overload) {  
+                            var mangledName = '__op_' +    
+                                typeinference.encodeOperatorName(symbolName) +    
+                                '_' +    
+                                overload.types.map(function(t) {    
+                                    return typeinference.sanitizeTypeName(t.toString());    
+                                }).join('_');    
+                            
+                            operatorSpecifiers.push({    
+                                type: "ImportSpecifier",    
+                                imported: {    
+                                    type: "Identifier",    
+                                    name: mangledName    
+                                },    
+                                local: {    
+                                    type: "Identifier",    
+                                    name: mangledName    
+                                }    
+                            });    
+                        });  
+                    }  
+                });  
+                
+                var imports = [{    
+                    type: "ImportDeclaration",    
+                    specifiers: [{    
+                        type: "ImportNamespaceSpecifier",    
+                        local: {    
+                            type: "Identifier",    
+                            name: moduleName    
+                        }    
+                    }],    
+                    source: {    
+                        type: "Literal",    
+                        value: modulePath    
+                    }    
+                }];    
+                
+                if (operatorSpecifiers.length > 0) {  
+                    imports.push({    
+                        type: "ImportDeclaration",    
+                        specifiers: operatorSpecifiers,    
+                        source: {    
+                            type: "Literal",    
+                            value: modulePath    
+                        }    
+                    });    
+                }    
+                
+                return imports;                          
+            }      
+                
         },
         // Function definition to JavaScript function.
         visitFunction: function () {
@@ -313,7 +431,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         visitLet: function () {
             return {
                 type: "VariableDeclaration",
-                kind: "var",
+                kind: "const",
                 declarations: [{
                     type: "VariableDeclarator",
                     id: {
@@ -347,11 +465,31 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             };
         },
         visitData: function () {
-            return {
-                type: "VariableDeclaration",
-                kind: "var",
-                declarations: _.map(n.tags, compileNode)
-            };
+            var declarations = _.map(n.tags, compileNode);  
+            
+            // Check if data type should be exported  
+            if (n.isExport) {  
+                // Export each constructor individually  
+                return _.map(declarations, function(decl) {  
+                    return {  
+                        type: "ExportNamedDeclaration",  
+                        declaration: {  
+                            type: "VariableDeclaration",  
+                            kind: "const",  
+                            declarations: [decl]  
+                        },  
+                        specifiers: [],  
+                        source: null  
+                    };  
+                });  
+            } else {  
+                // Regular non-exported data type  
+                return {  
+                    type: "VariableDeclaration",  
+                    kind: "const",  
+                    declarations: declarations  
+                };  
+            }  
         },
         visitReturn: function () {
             return {
@@ -1178,6 +1316,7 @@ var compile = function (source, env, aliases, opts) {
     if (!aliases) aliases = {};
     if (!opts) opts = {};
 
+
     if (!opts.exported) opts.exported = {};
 
     parser.yy.filename = opts.filename || "stdin";
@@ -1298,6 +1437,7 @@ var compile = function (source, env, aliases, opts) {
     }
 
     return {
+        ast: ast,
         type: resultType,
         output: escodegen.generate(
             ensureJsASTStatement(jsAst),

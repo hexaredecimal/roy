@@ -127,7 +127,7 @@ function sanitizeTypeName(type) {
     return typeStr.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_');
 }
 
-
+exports.sanitizeTypeName = sanitizeTypeName;
 function encodeOperatorName(opName) {
     var encoding = {
         '+': 'add',
@@ -150,6 +150,7 @@ function encodeOperatorName(opName) {
         return encoding[c] || c;
     }).join('_');
 }
+exports.encodeOperatorName = encodeOperatorName;
 
 
 // ### Helper functions for function definitions
@@ -425,22 +426,63 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 env.$importCache = {};  
             }  
 
-            const getExports = (body) => {
-                let exportedSymbols = {};  
-                _.each(body, function(node) {  
-                    if (node.annotations && node.annotations.length > 0) {  
-                        var hasExport = _.some(node.annotations, function(ann) {  
-                            return ann instanceof n.IdAnnotation && ann.name === 'export';  
-                        });  
-                        if (hasExport) {  
-                            var name = node.name;  
-                            if (name) { 
-                                exportedSymbols[name] = moduleEnv[name];  
+
+            const isOperator = (name) => {
+                const operatorChars = '+-*/%<>=!|&?@:';
+                return name.split('').every(function (c) {
+                    return operatorChars.includes(c);
+                });
+            };
+            
+            const getExports = (body) => {  
+                let exportedSymbols = {};    
+                _.each(body, function(astNode) {    
+                    if (astNode.annotations && astNode.annotations.length > 0) {    
+                        var hasExport = _.some(astNode.annotations, function(ann) {    
+                            return ann instanceof n.IdAnnotation && ann.name === 'export';    
+                        });    
+                        
+                        if (hasExport) {    
+                            var name = astNode.name;  
+                            
+                            if (isOperator(name)) {  
+                                // Initialize array to collect all overloads  
+                                if (!exportedSymbols[name]) {  
+                                    exportedSymbols[name] = [];  
+                                }  
+                                
+                                // Collect all binary overloads  
+                                if (moduleEnv.$operators['binary'][name]) {  
+                                    exportedSymbols[name] = exportedSymbols[name].concat(  
+                                        moduleEnv.$operators['binary'][name]  
+                                    );  
+                                }  
+                                
+                                // Collect all unary overloads  
+                                if (moduleEnv.$operators['unary'][name]) {  
+                                    exportedSymbols[name] = exportedSymbols[name].concat(  
+                                        moduleEnv.$operators['unary'][name]  
+                                    );  
+                                }  
+                            }
+                            else if (astNode instanceof n.Type) {  
+                                exportedSymbols[name] = moduleAliases[name];  
                             }  
-                        }  
-                    }  
-                });  
-                return exportedSymbols;
+                            // Handle algebraic data types  
+                            else if (astNode instanceof n.Data) {  
+                                exportedSymbols[name] = moduleEnv[name];  
+                                // Also export constructors  
+                                _.each(astNode.tags, function(tag) {  
+                                    exportedSymbols[tag.name] = moduleEnv[tag.name];  
+                                });  
+                            }
+                             else if (name) {   
+                                exportedSymbols[name] = moduleEnv[name];    
+                            }    
+                        }    
+                    }    
+                });    
+                return exportedSymbols;  
             };
             
             // Try to find the file  
@@ -454,13 +496,10 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                 );  
             } 
             
-            // Load and parse the module 
-            var rtSources = fs.readFileSync("./runtime/runtime.js", 'utf8');
-            var source = fs.readFileSync(filePath, 'utf8');  
-            var tokens = lexer.tokenise(source, { filename: filePath });  
-            var moduleAst = parser.parse(tokens);  
+            // Create new environment for the module  
 
-            if (env.$importCache[modulePath]) {  
+            if (env.$importCache[modulePath]) { 
+                const moduleAst = env.$importCache[modulePath].ast;
                 let exportedSymbols = getExports(moduleAst.body);
 
                 if (node.liftedIds && node.liftedIds.length > 0) {    
@@ -477,32 +516,18 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
                         env[liftedId] = exportedSymbols[liftedId];  
                     });  
                     
-                    // Remove namespace if it exists from a previous import  
                     var moduleName = node.path[node.path.length - 1];  
                     if (env[moduleName] instanceof t.ObjectType) {  
                         delete env[moduleName];  
                     }  
-                } else {    
-                    // Namespace import: open Std.IO    
+                } else {  
                     var moduleName = node.path[node.path.length - 1];    
                     env[moduleName] = new t.ObjectType(exportedSymbols);    
                 }
                 return new t.UnitType();
-            } 
-            
-            // Create new environment for the module  
-            var moduleEnv = {};
-            setUpEnv(moduleEnv)  
-            var moduleAliases = {};  
-            
-            var compileModule = require('./compile').compile;  
-            var compiled = compileModule(source, moduleEnv, moduleAliases, {  
-                filename: filePath,  
-                nodejs: true,  
-                exported: {}  
-            });  
+            }
 
-            env.$importCache[modulePath] = true
+
 
 
             // Create tmp directory if it doesn't exist  
@@ -510,6 +535,20 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             if (!fs.existsSync(tmpDir)) {  
                 fs.mkdirSync(tmpDir, { recursive: true });  
             }  
+            var moduleEnv = {};
+            setUpEnv(moduleEnv)  
+            var moduleAliases = {};  
+            var rtSources = fs.readFileSync("./runtime/runtime.js", 'utf8');
+            var source = fs.readFileSync(filePath, 'utf8'); 
+
+            var compileModule = require('./compile').compile;  
+            var compiled = compileModule(source, moduleEnv, moduleAliases, {  
+                filename: filePath,  
+                nodejs: true,  
+                exported: {},
+                getAst: true
+            });  
+            var moduleAst = compiled.ast;  
             
             // Generate output filename using dot-separated path (e.g., "Std.Io.js")  
             var outputFileName = node.path.join('.') + '.js';  
@@ -519,30 +558,69 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             fs.writeFileSync(outputPath, rtSources + "\n\n" + compiled.output);  
 
             let exportedSymbols = getExports(moduleAst.body);
+            env.$importCache[modulePath] = {  
+                env: moduleEnv,  
+                exports: exportedSymbols,  
+                ast: compiled.ast
+            };
 
-            if (node.liftedIds && node.liftedIds.length > 0) {    
-                // Selective import: open Std.IO.{print, println}    
-                _.each(node.liftedIds, function(liftedId) {    
-                    if (!exportedSymbols[liftedId]) {    
-                        errors.reportError(    
-                            node.filename,    
-                            node.lineno,    
-                            node.column,    
-                            "Symbol '" + liftedId + "' is not exported from module " + modulePath    
-                        );    
-                    }    
-                    env[liftedId] = exportedSymbols[liftedId];  
-                });  
-                
-                // Remove namespace if it exists from a previous import  
-                var moduleName = node.path[node.path.length - 1];  
-                if (env[moduleName] instanceof t.ObjectType) {  
-                    delete env[moduleName];  
-                }  
-            } else {    
-                // Namespace import: open Std.IO    
+
+            if (node.liftedIds && node.liftedIds.length > 0) {
+                _.each(node.liftedIds, function(liftedId) {      
+                    if (!exportedSymbols[liftedId]) {      
+                        errors.reportError(      
+                            node.filename,      
+                            node.lineno,      
+                            node.column,      
+                            "Symbol '" + liftedId + "' is not exported from module " + modulePath      
+                        );      
+                    }  
+                    
+                    if (isOperator(liftedId)) {  
+                        var overloads = exportedSymbols[liftedId];  
+                        
+                        _.each(overloads, function(overload) {  
+                            var argCount = overload.types.length - 1;  
+                            var tableKey = argCount === 1 ? 'unary' : argCount === 2 ? 'binary' : null;  
+                            if (tableKey) {  
+                                if (!env.$operators[tableKey][liftedId]) {  
+                                    env.$operators[tableKey][liftedId] = [];  
+                                }  
+                                env.$operators[tableKey][liftedId].push(overload);  
+                            }  
+                        });  
+                    } else {
+                        const symbol = exportedSymbols[liftedId];  
+                        if (symbol && (symbol.params || symbol.body || symbol.aliased)) {  
+                            aliases[liftedId] = symbol;  
+                        }  else {  
+                            env[liftedId] = exportedSymbols[liftedId];    
+                        }  
+                    }
+                });    
+                       
+            } else {     
                 var moduleName = node.path[node.path.length - 1];    
-                env[moduleName] = new t.ObjectType(exportedSymbols);    
+                env[moduleName] = new t.ObjectType(exportedSymbols);
+
+                _.each(exportedSymbols, function(symbolType, symbolName) {  
+                    if (isOperator(symbolName)) {
+                        if (Array.isArray(symbolType)) {  
+                            _.each(symbolType, function(overload) {  
+                                var argCount = overload.types.length - 1;  
+                                var tableKey = argCount === 1 ? 'unary' : argCount === 2 ? 'binary' : null;  
+                                
+                                if (tableKey) {  
+                                    if (!env.$operators[tableKey][symbolName]) {  
+                                        env.$operators[tableKey][symbolName] = [];  
+                                    }  
+                                    env.$operators[tableKey][symbolName].push(overload);  
+                                }  
+                            });  
+                        }  
+                    }  
+                });
+    
             }
             return new t.UnitType();  
         },
@@ -1534,3 +1612,4 @@ var typecheck = function (ast, env, aliases, opts) {
     return types && types[0];
 };
 exports.typecheck = typecheck;
+

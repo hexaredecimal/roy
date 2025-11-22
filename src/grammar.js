@@ -50,17 +50,17 @@ var grammar = {
       ["importPATH . IDENTIFIER", "$$ = $1; $$.push($3);"],
     ],
     "importLiftedIds": [
-      ["IDENTIFIER", "$$ = [$1];"],
-      ["importPATH , IDENTIFIER", "$$ = $1; $$.push($3);"],
+      ["funcName", "$$ = [$1];"],
+      ["importLiftedIds , funcName", "$$ = $1; $$.push($3);"],
     ],
+
     "statement": [
       ["toplevel", "$$ = $1;"],
-      ["dataDecl", "$$ = $1;"],
-      ["typeDecl", "$$ = $1;"],
       ["annotation toplevel", "$$ = $2; $2.annotations = $1;"]
     ],
     "toplevel": [
       ["LET function", "$$ = $2;"],
+      ["typeDecl", "$$ = $1;"],
       ["LET binding", "$$ = $2;"],
     ],
     "annotation": [
@@ -157,7 +157,7 @@ var grammar = {
     ],
 
     // type Maybe a = Some a | None
-    "dataDecl": [
+    "typeDecl": [
       ["TYPE IDENTIFIER optDataParamList = dataOrAlias", n(
         "$$ = Array.isArray($5) ? ($5.length == 1 ? new yy.TypeName($5[0].name, $5[0].vars): new yy.Data($2, $3, $5)) : new yy.Type($2, $5, $3);"
       )]
