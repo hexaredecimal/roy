@@ -1,0 +1,10 @@
+
+#[export]
+type Result 'v 'e = Ok 'v | Err 'e
+
+#[export]
+let unwrap r =
+  when r is
+    | Ok v = v
+
+    

@@ -1,0 +1,116 @@
+
+#[extern("Math.abs"), export]
+let abs (a: Number) : Number
+
+#[extern("Math.sign"), export]
+let sign (a: Number) : Number
+
+#[extern("Math.trunc"), export]
+let trunc (a: Number) : Number
+
+#[extern("Math.round"), export]
+let round (a: Number) : Number
+
+#[extern("Math.floor"), export]
+let floor (a: Number) : Number
+
+#[extern("Math.ceil"), export]
+let ceil (a: Number) : Number
+
+#[extern("Math.clamp"), export]
+let clamp (a: Number) (lower: Number) (upper: Number) : Number
+
+#[extern("Math.pow"), export]
+let pow (a: Number) (b: Number) : Number
+
+#[extern("Math.sqrt"), export]
+let sqrt (a: Number) : Number
+
+#[extern("Math.cbrt"), export]
+let cbrt (a: Number) : Number
+
+#[extern("Math.exp"), export]
+let exp (a: Number) : Number
+
+#[extern("Math.expm1"), export]
+let expm1 (a: Number) : Number
+
+#[extern("Math.log"), export]
+let log (a: Number) : Number
+
+#[extern("Math.log1p"), export]
+let log1p (a: Number) : Number
+
+#[extern("Math.log10"), export]
+let log10 (a: Number) : Number
+
+#[extern("Math.log2"), export]
+let log2 (a: Number) : Number
+
+#[extern("Math.min"), export]
+let min (a: Number) (b: Number) : Number
+
+#[extern("Math.max"), export]
+let max (a: Number) (b: Number) : Number
+
+#[extern("Math.random"), export]
+let random () : Number
+
+#[extern("Math.fround"), export]
+let fround (a: Number) : Number
+
+#[extern("Math.imul"), export]
+let imul (a: Number) (b: Number) : Number
+
+#[extern("Math.hypot"), export]
+let hypot (a: Number) (b: Number) : Number
+
+#[extern("Math.sin"), export]
+let sin (a: Number) : Number
+
+#[extern("Math.cos"), export]
+let cos (a: Number) : Number
+
+#[extern("Math.tan"), export]
+let tan (a: Number) : Number
+
+#[extern("Math.asin"), export]
+let asin (a: Number) : Number
+
+#[extern("Math.acos"), export]
+let acos (a: Number) : Number
+
+#[extern("Math.atan"), export]
+let atan (a: Number) : Number
+
+#[extern("Math.atan2"), export]
+let atan2 (a: Number) : Number
+
+#[extern("Math.sinh"), export]
+let sinh (a: Number) : Number
+
+#[extern("Math.cosh"), export]
+let cosh (a: Number) : Number
+
+#[extern("Math.tanh"), export]
+let tanh (a: Number) : Number
+
+#[extern("Math.asinh"), export]
+let asinh (a: Number) : Number
+
+#[extern("Math.acosh"), export]
+let acosh (a: Number) : Number
+
+#[extern("Math.atanh"), export]
+let atanh (a: Number) : Number
+
+#[extern("Math.scale"), export]
+let scale (a: Number) (inLow: Number) (inHigh: Number)  (outLow: Number) (outHigh: Number) : Number
+
+#[extern("Math.deg"), export]
+let deg (a: Number) : Number
+
+#[extern("Math.rad"), export]
+let rad (a: Number) : Number
+
+
