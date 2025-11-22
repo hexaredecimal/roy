@@ -8,7 +8,7 @@ var getFileContents = function(filename) {
 
     filenames = /\..+$/.test(filename) ? // if an extension is specified,
                 [filename] :             // don't bother checking others
-                _.map(["", ".rml"], function(ext){
+                _.map(["", ".lml"], function(ext){
                     return filename + ext;
                 });
 
