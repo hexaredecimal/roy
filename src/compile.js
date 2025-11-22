@@ -795,12 +795,24 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             var buildTest = function (pattern, valueExpr) {
                 return pattern.accept({
                     visitNumber: function () {
-                        return {
-                            type: "BinaryExpression",
-                            operator: "===",
-                            left: valueExpr,
-                            right: { type: "Literal", value: parseFloat(pattern.value) }
-                        };
+                        var rawValue = pattern.value.replace(/_/g, '');  
+                        var numValue;  
+                        if (rawValue.startsWith('0x') || rawValue.startsWith('0X')) {  
+                            numValue = parseInt(rawValue, 16);  
+                        } else if (rawValue.startsWith('0o') || rawValue.startsWith('0O')) {  
+                            numValue = parseInt(rawValue, 8);  
+                        } else if (rawValue.startsWith('0b') || rawValue.startsWith('0B')) {  
+                            numValue = parseInt(rawValue, 2);  
+                        } else {  
+                            numValue = parseFloat(rawValue);  
+                        }  
+                        
+                        return {  
+                            type: "BinaryExpression",  
+                            operator: "===",  
+                            left: valueExpr,  
+                            right: { type: "Literal", value: numValue }  
+                        };  
                     },
                     visitString: function () {
                         return {
@@ -1221,9 +1233,21 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             };
         },
         visitNumber: function () {
+            var rawValue = n.value;
+            var numValue;  
+            if (rawValue.startsWith('0x') || rawValue.startsWith('0X')) {  
+                numValue = parseInt(rawValue, 16);  
+            } else if (rawValue.startsWith('0o') || rawValue.startsWith('0O')) {  
+                numValue = parseInt(rawValue, 8);  
+            } else if (rawValue.startsWith('0b') || rawValue.startsWith('0B')) {  
+                numValue = parseInt(rawValue, 2);  
+            } else {  
+                numValue = parseFloat(rawValue);  
+            }  
+            
             return {
                 type: "Literal",
-                value: parseFloat(n.value)
+                value: numValue
             };
         },
         visitString: function () {
