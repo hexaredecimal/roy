@@ -20,9 +20,9 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [X] Annotations
 - [X] Operator overloading
 - [ ] Mutability/References
-- [ ] Custom stdlib (With few external functions)
+- [X] Custom stdlib
 - [X] Build binaries (Using QuickJS as the runtime)
-- [] Let in expression
+- [X] Let in expression
 
 ## What I aim to achieve
 ```ocaml
@@ -34,7 +34,7 @@ let add a b = sum a b
     sum a b = a + b
 
 let main = 
-  Print.print "{}" (add 10 10)
+  Print.print "{}" [add 10 10]
   
 ```
 
