@@ -191,3 +191,46 @@ let sin (a: Number) : Number = Math.sin a
 ```
 #### Note: External functions MUST have type declarations for arguments and the return type. Your program cannot compile if they are missing.
 
+### String Formatting
+
+// 1. Empty {}
+__rml_string_fmt("{} {}", [10, 20]);   // "10 20"
+
+// 2. Format-only {:spec}
+__rml_string_fmt("{:04}", [32]);       // "0032"
+
+// 3. Fill and Alignment
+__rml_string_fmt("{:*>8}", ["hi"]);    // "******hi"
+__rml_string_fmt("{:-<6}", ["ok"]);    // "ok----"
+__rml_string_fmt("{:.^10}", ["yo"]);   // "....yo...."
+
+// 4. Width
+__rml_string_fmt("{:10}", ["abc"]);    // "abc       "
+__rml_string_fmt("{:05}", [7]);        // "00007"
+
+// 5. Precision
+__rml_string_fmt("{:.3f}", [Math.PI]);  // "3.142"
+__rml_string_fmt("{:.4}", ["abcdef"]);  // "abcd"
+
+// 6. Type Specifiers
+__rml_string_fmt("{:x}", [255]);        // "ff"
+__rml_string_fmt("{:X}", [255]);        // "FF"
+__rml_string_fmt("{:b}", [10]);         // "1010"
+__rml_string_fmt("{:o}", [8]);          // "10"
+__rml_string_fmt("{:.2f}", [Math.PI]);  // "3.14"
+
+// 7. Numeric Handling Quirks
+__rml_string_fmt("{:x}", [-3.7]);       // "-3"
+__rml_string_fmt("{:b}", [5.8]);        // "101"
+
+// 8. String Handling
+__rml_string_fmt("{:.3}", ["abcdef"]);  // "abc"
+
+// 9. Width Padding Behavior
+__rml_string_fmt("{:>6}", ["hi"]);      // "    hi"
+__rml_string_fmt("{:<6}", ["hi"]);      // "hi    "
+__rml_string_fmt("{:^6}", ["hi"]);      // "  hi  "
+__rml_string_fmt("{:06}", [42]);        // "000042"
+
+// 10. Escaping Braces
+__rml_string_fmt("{{}}", []);           // "{}"
