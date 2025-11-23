@@ -3,9 +3,8 @@
 #[extern("__rml_print"), export]
 let print (a: 'a) : Unit
 
-
 #[extern("__rml_printf"), export]
-let printf (fmt: String) (args: ('a)) : Unit
+let printf (fmt: String) (args: [Any]) : Unit
 
 #[extern("__rml_println"), export]
 let println (a: 'a) : Unit

@@ -1,0 +1,21 @@
+
+#[export]
+type Option 'a = Some 'a | None
+
+#[export]
+let unwrap o = 
+  when o is
+    | Some a = a
+
+#[export]
+let unwrapOr v o = 
+  when o is
+    | Some a = a
+    | None = v
+
+#[export]
+let unwrapOrElse f o = 
+  when o is
+    | Some a = a
+    | None = f o
+

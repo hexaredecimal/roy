@@ -1,0 +1,19 @@
+
+open Std.Adt.Option (Option)
+open Std.Adt.Result (Result)
+
+#[extern("__rml_get_env"), export]
+let getEnv (varname: String) : Option String
+
+#[extern("__rml_get_env"), export]
+let setEnv (varname: String) (value: String) : Unit
+
+#[extern("__rml_remove"), export]
+let remove (filename: String) : Result Unit String
+
+#[extern("__rml_rename"), export]
+let rename (oldName: String) (newName: String) : Result Unit String
+
+#[extern("__rml_get_platform"), export]
+let getPlatform () : String
+

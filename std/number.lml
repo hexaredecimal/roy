@@ -1,0 +1,8 @@
+
+#[export]
+let MAX_VALUE = 9007199254740991
+
+#[export]
+let MIN_VALUE = -9007199254740991
+
+

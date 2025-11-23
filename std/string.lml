@@ -1,0 +1,11 @@
+
+#[extern("__rml_toString"), export]
+let from (value: 'a) : String
+
+#[extern("__rml_string_size"), export]
+let size (value: 'a) : String
+
+#[extern("__rml_string_fmt"), export]
+let format (fmt: String) (args: [Any]) : Unit
+
+
