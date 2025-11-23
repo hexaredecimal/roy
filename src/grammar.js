@@ -87,6 +87,11 @@ var grammar = {
       ["innerExpression", "$$ = $1;"],
       ["MATCH innerExpression IS caseList", n("$$ = new yy.Match($2, $4);")],
       ["ifThenElse", "$$ = $1;"],
+      ["LET letInBindings IN innerExpression", n("$$ = new yy.LetIn($2, $4);")]
+    ],
+    "letInBindings": [  
+        ["IDENTIFIER optType = innerExpression", "$$ = [{name: $1, value: $4, type: $2}];"],  
+        ["letInBindings IDENTIFIER optType = innerExpression", "$$ = $1; $1.push({name: $2, value: $5, type: $3});"]  
     ],
     "callArgument": [
       ["( expression )", n("$$ = $2;")],
@@ -163,7 +168,7 @@ var grammar = {
     // type Maybe a = Some a | None
     "typeDecl": [
       ["TYPE IDENTIFIER optDataParamList = dataOrAlias", n(
-        "$$ = Array.isArray($5) ? ($5.length == 1 ? new yy.TypeName($5[0].name, $5[0].vars): new yy.Data($2, $3, $5)) : new yy.Type($2, $5, $3);"
+        "$$ = Array.isArray($5) ? ($5.length == 1 ? new yy.Type($2, new yy.TypeName($5[0].name, $5[0].vars), $3) : new yy.Data($2, $3, $5)) : new yy.Type($2, $5, $3);"
       )]
     ],
     "dataOrAlias": [

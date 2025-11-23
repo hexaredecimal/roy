@@ -270,7 +270,7 @@ var runRoy = function (argv, opts) {
             } else if (opts.exe) {
                 fs.writeFileSync(outputPath, output);
                 var binaryPath = filename.replace(extensions, '');
-                cmd(`qjsc -m -o ${binaryPath} ${outputPath}`);
+                cmd(`qjsc -m --keep-source -o ${binaryPath} ${outputPath}`);
                 fs.unlinkSync(outputPath); 
             }
         }

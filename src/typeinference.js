@@ -143,7 +143,8 @@ function encodeOperatorName(opName) {
         '&': 'and',
         '?': 'qmark',
         '@': 'at',
-        ':': 'colon'
+        ':': 'colon',
+        ';': 'semicolon',
     };
 
     return opName.split('').map(function (c) {
@@ -559,10 +560,13 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             fs.writeFileSync(outputPath, rtSources + "\n\n" + compiled.output);  
 
             let exportedSymbols = getExports(moduleAst.body, moduleEnv);
+
+            //console.log(path.dirname(node.filename), path.dirname(__dirname))
             env.$importCache[modulePath] = {  
                 env: moduleEnv,  
                 exports: exportedSymbols,  
-                ast: compiled.ast
+                ast: compiled.ast,
+                imported: path.dirname(node.filename) !== '.'
             };
 
 
@@ -926,6 +930,25 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             env[node.name] = valueType;
 
             return valueType;
+        },
+        visitLetIn: function() {  
+            // Clone environment for scoped bindings  
+            var newEnv = _.extend({}, env);  
+            
+            // Analyze each binding in sequence  
+            _.each(node.bindings, function(binding) {  
+                var valueType = analyse(binding.value, newEnv, nonGeneric, aliases, constraints);  
+                
+                if (binding.type) {  
+                    var annotationType = nodeToType(binding.type, newEnv, aliases);  
+                    unify(valueType, annotationType, node);  
+                }  
+                
+                newEnv[binding.name] = valueType;  
+            });  
+            
+            // Analyze body in extended environment  
+            return analyse(node.body, newEnv, nonGeneric, aliases, constraints);  
         },
         visitTypeClass: function () {
             var genericType = nodeToType(node.generic, env, aliases);
@@ -1616,7 +1639,7 @@ var typecheck = function (ast, env, aliases, opts) {
 
             return type;
         } catch (err) {
-            console.log(err)
+            //console.log(err)
             errors.reportError(node.filename, node.lineno, node.column, err);
         }
     });

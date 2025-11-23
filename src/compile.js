@@ -138,7 +138,7 @@ var extraComments = []
 var compileNodeWithEnvToJsAST = function (n, env, opts) {
     if (!opts) opts = {};
     var compileNode = function (n) {
-        return compileNodeWithEnvToJsAST(n, env);
+        return compileNodeWithEnvToJsAST(n, env, opts);
     };
 
     var result = n.accept({
@@ -152,10 +152,16 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             };
         },
         visitImportIntoModule: function () {
-            var modulePath = './tmp/' + n.path.join('.') + ".js";  
+            
             var modulePathKey = n.path.map(p => p.toLowerCase()).join('/');  
             
-            // Get cached module info  
+            var imported = env.$importCache && env.$importCache[modulePathKey]   
+                ? env.$importCache[modulePathKey].imported   
+                : false;  
+
+            const prefix = imported ? "./" : "./tmp/";
+            var modulePath = prefix + n.path.join('.') + ".js";  
+            
             var cached = env.$importCache && env.$importCache[modulePathKey]   
                 ? env.$importCache[modulePathKey]   
                 : null;  
@@ -451,6 +457,41 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
             }  
 
             return declaration
+        },
+        visitLetIn: function() {  
+            var declarations = _.map(n.bindings, function(binding) {  
+                return {  
+                    type: "VariableDeclaration",  
+                    kind: "var",  
+                    declarations: [{  
+                        type: "VariableDeclarator",  
+                        id: { type: "Identifier", name: binding.name },  
+                        init: compileNode(binding.value)  
+                    }]  
+                };  
+            });  
+
+
+            return {
+                type: "CallExpression",
+                "arguments": [],
+                callee: {
+                    type: "SequenceExpression",
+                    expressions: [{
+                        type: "FunctionExpression",
+                        id: null,
+                        params: [],
+                        body: {
+                            type: "BlockStatement",
+                            body: declarations.concat([{  
+                                type: "ReturnStatement",  
+                                argument: compileNode(n.body)  
+                            }]) 
+                        }
+                    }]
+                }
+            };
+             
         },
         visitInstance: function () {
             return {
@@ -1080,6 +1121,14 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                 };  
             }  
 
+            if (args.length === 0) {  
+                return {  
+                    type: "CallExpression",  
+                    "arguments": [],  
+                    callee: result  
+                };  
+            }  
+        
 
             _.each(args, function (arg) {
                 result = {

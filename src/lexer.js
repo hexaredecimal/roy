@@ -26,20 +26,16 @@ var keywordTokens = {
     'false': 'BOOLEAN',
     'let': 'LET',
     'if': 'IF',
-    'instance': 'INSTANCE',
     'then': 'THEN',
     'else': 'ELSE',
-    'data': 'DATA',
     'type': 'TYPE',
-    'typeclass': 'TYPECLASS',
     'when': 'MATCH',
     'is': 'IS',
     'case': 'CASE',
-    'do': 'DO',
-    'return': 'RETURN',
     'with': 'WITH',
     'where': 'WHERE',
-    'open': 'OPEN'
+    'open': 'OPEN',
+    'in': 'IN'
 };
 
 var indent;

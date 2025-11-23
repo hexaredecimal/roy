@@ -243,6 +243,16 @@ exports.nodes = {
             }
         };
     },
+    LetIn: function(bindings, body) {  
+        this.bindings = bindings;
+        this.body = body;  
+        
+        this.accept = function(a) {  
+            if (a.visitLetIn) {  
+                return a.visitLetIn(this);  
+            }  
+        };  
+    },
     Call: function (func, args) {
         this.func = func;
         this.args = args;
