@@ -192,15 +192,18 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     }  
 
                     if (isOperator(id)) {      
-                        var overloads = exportedSymbol;  
-                        _.each(overloads, function(overload) {      
+                        var overloads = exportedSymbol;
+                        const seen = [];  
+                        _.each(overloads, function(overload) {
                             var mangledName = '__op_' +      
                                 typeinference.encodeOperatorName(id) +      
                                 '_' +      
                                 overload.types.map(function(t) {      
                                     return typeinference.sanitizeTypeName(t.toString());      
                                 }).join('_');      
-                            
+
+                            if (seen.includes(mangledName)) return;
+                            seen.push(mangledName);
                             specifiers.push({      
                                 type: "ImportSpecifier",      
                                 imported: { type: "Identifier", name: mangledName },      
