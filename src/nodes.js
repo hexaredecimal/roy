@@ -453,5 +453,14 @@ exports.nodes = {
                 return a.visitImportIntoModule(this);  
             }  
       }; 
+    },
+    TypeReference: function(type) {  
+        this.type = type;  
+        
+        this.accept = function(a) {  
+            if (a.visitTypeReference) {  
+                return a.visitTypeReference(this);  
+            }  
+        };  
     }
 };

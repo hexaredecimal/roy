@@ -1404,6 +1404,10 @@ var nodeToType = function (n, env, aliases) {
                 types[k] = nodeToType(v, env, aliases);
             });
             return new t.ObjectType(types);
+        },
+        visitTypeReference: function(tr) {  
+            var innerType = nodeToType(tr.type, env, aliases);  
+            return new t.ReferenceType(innerType);  
         }
     });
 };
@@ -1603,6 +1607,26 @@ var setUpEnv = function(env) {
         builtin: true
     }];
 
+    env.$operators.unary['&'] = [{
+        types: [],
+        name: '&',
+        type: new t.FunctionType([new t.Variable(), new t.ReferenceType(new t.Variable())]),
+        builtin: true
+    }];
+
+    env.$operators.unary['*'] = [{
+        types: [],
+        name: '*',
+        type: new t.FunctionType([new t.ReferenceType(new t.Variable()), new t.Variable()]),
+        builtin: true
+    }];
+
+    env.$operators.binary['='] = [{
+        types: [],
+        name: '=',
+        type: new t.FunctionType([new t.ReferenceType(new t.Variable()), new t.Variable(), new t.ReferenceType(new t.Variable())]),
+        builtin: true
+    }];
 
     env['__rml_sys_list_addFirst'] = new t.FunctionType([
         new t.Variable(),

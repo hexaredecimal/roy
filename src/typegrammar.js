@@ -2,6 +2,7 @@ var bnf = {
     // For type annotations
     "declTypes": [
         ["GENERIC", "$$ = new yy.Generic($1);"],
+        ["& type", "$$ = new yy.TypeReference($2);"],
         ["[ type ]", "$$ = new yy.TypeArray($2);"],
         ["( typeList )", "$$ = new yy.TypeObject($2);"],
         ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"],
@@ -11,6 +12,7 @@ var bnf = {
     "type": [
         ["IDENTIFIER optTypeParamList", "$$ = new yy.TypeName($1, $2);"],
         ["GENERIC", "$$ = new yy.Generic($1);"],
+        ["& type", "$$ = new yy.TypeReference($2);"],
         ["[ type ]", "$$ = new yy.TypeArray($2);"],
         ["( typeList )", "$$ = new yy.TypeObject($2);"],
         ["{ optTypePairs }", "$$ = new yy.TypeObject($2);"],

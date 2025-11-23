@@ -196,6 +196,23 @@ ArrayType.prototype.toString = function () {
 };
 exports.ArrayType = ArrayType;
 
+var ReferenceType = function (type) {
+    this.type = type;
+    this.types = [type];
+    ReferenceType.prototype.name = '&' + this.type.toString();
+};
+
+ReferenceType.prototype = new BaseType();
+
+ReferenceType.prototype.fresh = function (nonGeneric, mappings) {
+    if (!mappings) mappings = {};
+    return new ReferenceType(this.type.fresh(nonGeneric, mappings));
+};
+ArrayType.prototype.toString = function () {
+    return '&' + this.type.toString();
+};
+exports.ReferenceType = ReferenceType;
+
 var ObjectType = function (props) {
     this.props = props;
 };

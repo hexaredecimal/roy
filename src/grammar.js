@@ -108,12 +108,15 @@ var grammar = {
       ["innerExpression OPERATOR call", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["innerExpression : callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["innerExpression : call", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["innerExpression = callArgument", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
+      ["innerExpression = call", n("$$ = new yy.Call(new yy.Identifier($2), [$1, $3]);")],
       ["callArgument WITH innerExpression", n("$$ = new yy.With($1, $3);")],
       ["LAMBDA paramList optType RIGHTARROW expression", n("$$ = new yy.Function(undefined, $2, [$5], $3);")],
       ["literal", "$$ = $1;"]
     ],
     "unaryExpression": [
       ["opName literal", n("$$ = new yy.Call(new yy.Identifier($1), [$2]);")],
+      ["opName accessor", n("$$ = new yy.Call(new yy.Identifier($1), [$2]);")],
       ["opName call", n("$$ = new yy.Call(new yy.Identifier($1), [$2]);")],
     ],
     "innerExpression": [
@@ -215,6 +218,7 @@ var grammar = {
       ["-", "$$ = $1;"],
       ["?", "$$ = $1;"],
       [":", "$$ = $1;"],
+      ["&", "$$ = $1;"],
       ["BOOLOP", "$$ = $1;"],
       ["COMPARE", "$$ = $1;"],
       ["OPERATOR", "$$ = $1;"],
