@@ -35,7 +35,8 @@ var keywordTokens = {
     'with': 'WITH',
     'where': 'WHERE',
     'open': 'OPEN',
-    'in': 'IN'
+    'in': 'IN',
+    'function': 'FUNCTION'
 };
 
 var indent;

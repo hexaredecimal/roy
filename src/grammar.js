@@ -193,7 +193,8 @@ var grammar = {
     "optDataParamList": typegrammar.optDataParamList,
 
     "function": [  
-      ["funcName paramList optType rhsValue optWhere", n("$$ = new yy.Function($1, $2, $4, $3, $5);")]  
+      ["funcName paramList optType rhsValue optWhere", n("$$ = new yy.Function($1, $2, $4, $3, $5);")],  
+      ["funcName = FUNCTION caseList optWhere", n("$$ = new yy.Function($1, [new yy.Arg('__arg')], [new yy.Match(new yy.Identifier('__arg'), $4)], undefined, $5);")]  
     ], 
     "binding": [
       ["IDENTIFIER optType = expression", n("$$ = new yy.Let($1, $4, $2);")]
