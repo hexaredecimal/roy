@@ -1,0 +1,16 @@
+open Std.Printf
+open Std.List ((:), map)
+open Std.Pipe ((|>))
+
+let merge la ra =
+  when (la, ra) is
+    | ([], []) = []
+    | ([a], [b]) = a:b:[]
+    | (h:r, c:t) = h:c:merge r t
+
+let main () = 
+  1:2:3:4:5:[]
+  |> merge [6, 7, 8, 9, 10]
+  |> map (\x -> x * 2)
+  |> Printf.println
+
