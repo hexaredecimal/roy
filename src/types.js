@@ -221,8 +221,15 @@ ObjectType.prototype.name = "Object";
 ObjectType.prototype.fresh = function (nonGeneric, mappings) {
     var props = {};
     var name;
+    const isOperator = (name) => {
+        const operatorChars = '+-*/%<>=!|&?@:';
+        return name.split('').every(function (c) {
+            return operatorChars.includes(c);
+        });
+    };
     for (name in this.props) {
-        props[name] = this.props[name].fresh(nonGeneric, mappings);
+        if (isOperator(name)) { props[name] = this.props[name]; }
+        else props[name] = this.props[name].fresh(nonGeneric, mappings);
     }
     var freshed = new ObjectType(props);
     if (this.aliased) freshed.aliased = this.aliased;
