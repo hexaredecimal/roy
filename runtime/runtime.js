@@ -100,9 +100,15 @@ const __rml_sys_list_addFirst = (value) => {
 
 const __rml_sys_list_addLast = (value) => {
     return (list) => {
-        return list.concat(value);
+        return  [...list, value];
     }
 }
+
+
+const __rml_sys_list_reduce = (func, def, list) => {
+    return list.reduce(func, def);
+}
+
 
 
 // Unit
