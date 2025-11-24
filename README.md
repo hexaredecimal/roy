@@ -19,6 +19,7 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [X] Typed external functions
 - [X] Annotations
 - [X] Operator overloading
+- [X] Mutability (Using References)
 - [X] Custom stdlib
 - [X] Build binaries (Using QuickJS as the runtime)
 - [X] Let in expression
