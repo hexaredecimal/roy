@@ -133,11 +133,51 @@ var grammar = {
       ["NUMBER", n("$$ = new yy.Number($1);")],
       ["STRING", n("$$ = new yy.String($1);")],
       ["BOOLEAN", n("$$ = new yy.Boolean($1);")],
-      ["tuple", "$$ = $1;"],
-      ["[ optValues ]", n("$$ = new yy.Array($2);")],
-      ["object", "$$ = $1;"],
-      ["listConstPattern", "$$ = $1;"]
+      ["listConstPattern", "$$ = $1;"],
+      ["patternArray", "$$ = $1;"],
+      ["patternTuple", "$$ = $1;"],
+      ["patternObject", "$$ = $1;"],
     ],
+
+
+    "patternArray": [
+      ["[ optPatternValues ]", n("$$ = new yy.Array($2);")]
+    ],
+
+    "optPatternValues": [
+      ["", "$$ = [];"],
+      ["patternValues", "$$ = $1;"]
+    ],
+
+    "patternValues": [
+      ["pattern", "$$ = [$1];"],
+      ["patternValues , pattern", "$$ = $1; $1.push($3);"]
+    ],
+
+    "patternTuple": [
+      ["( pattern , patternTupleList )", n("$4.unshift($2); $$ = new yy.Tuple($4);")]
+    ],
+
+    "patternTupleList": [
+      ["pattern", "$$ = [$1];"],
+      ["patternTupleList , pattern", "$$ = $1; $1.push($3);"]
+    ],
+
+    "patternObject": [
+      ["{ optPatternPairs }", n("$$ = new yy.ObjectPattern($2);")]
+    ],
+
+    "optPatternPairs": [
+      ["", "$$ = {};"],
+      ["patternPairs", "$$ = $1;"]
+    ],
+
+    "patternPairs": [
+      ["keywordOrIdentifier : pattern", "$$ = {}; $$[$1] = $3;"],
+      ["patternPairs , keywordOrIdentifier : pattern", "$$ = $1; $1[$3] = $5;"]
+    ],
+
+    
     "patternArgs": [
       ["", "$$ = []"],
       ["patternIdentifiers", "$$ = $1"],
@@ -148,7 +188,7 @@ var grammar = {
       ["patternIdentifiers sumTypeArg", "$$ = $1; $1.push($2);"]
     ],
     "listConstPattern" : [
-      ["listConstPatternItems", n("$$ =new yy.ListConstPattern($1);")],
+      ["pattern : listConstPatternItems", n("$$ = new yy.ListConstPattern([$1, ...$3]);")],
     ],
     "listConstPatternItems": [
       ["pattern", "$$ = [$1];"],
