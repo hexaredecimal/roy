@@ -89,7 +89,6 @@ var grammar = {
       ["MATCH innerExpression IS caseList", n("$$ = new yy.Match($2, $4);")],
       ["ifThenElse", "$$ = $1;"],
       ["LET letInBindings IN innerExpression", n("$$ = new yy.LetIn($2, $4);")],
-      ["LET IDENTIFIER optType = innerExpression", n("$$ = new yy.LetIn([{name: $2, value: $5, type: $3}], new yy.Identifier($2));")]
     ],
     "letInBindings": [  
         ["IDENTIFIER optType = innerExpression", "$$ = [{name: $1, value: $4, type: $2}];"],  
