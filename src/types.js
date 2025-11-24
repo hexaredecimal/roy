@@ -208,7 +208,7 @@ ReferenceType.prototype.fresh = function (nonGeneric, mappings) {
     if (!mappings) mappings = {};
     return new ReferenceType(this.type.fresh(nonGeneric, mappings));
 };
-ArrayType.prototype.toString = function () {
+ReferenceType.prototype.toString = function () {
     return '&' + this.type.toString();
 };
 exports.ReferenceType = ReferenceType;
