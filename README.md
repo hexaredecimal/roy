@@ -37,15 +37,32 @@ let main () =
   |> Printf.println
 ```
 
+
 ## Building
+
+#### Build Requirements
+In the project to compile and run without issues please make sure the following are installed
+and available on your path.
+- NodeJS
+- QuickJS
+
+#### Build Steps
+
 Run the following steps in sequence
  
 ```sh
 $ git clone https://github.com/hexaredecimal/Llaml.git
 $ cd Llaml
+$ npm install
 $ make || make clean && make dist
 $ ./llml help
 ```
+
+
+
+## Contributions
+Contributions are welcome and be mindful that this is a fork of project that is greater than 12 years. 
+The JS standard is so 2013 (using var, instead of let and const). 
 
 
 ## References and study material
