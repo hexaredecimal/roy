@@ -739,6 +739,27 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                     visitBoolean: function () {
                         // Literals don't bind variables  
                     },
+                    visitCall: function() {  
+                        if (pattern.func && pattern.func.value === ':' && pattern.args && pattern.args.length === 2) {  
+                            extractVars(pattern.args[0], {  
+                                type: "MemberExpression",  
+                                object: valueExpr,  
+                                property: { type: "Literal", value: 0 },  
+                                computed: true  
+                            }, vars);  
+                            
+                            extractVars(pattern.args[1], {  
+                                type: "CallExpression",  
+                                callee: {  
+                                    type: "MemberExpression",  
+                                    object: valueExpr,  
+                                    property: { type: "Identifier", name: "slice" },  
+                                    computed: false  
+                                },  
+                                arguments: [{ type: "Literal", value: 1 }]  
+                            }, vars);  
+                        }  
+                    },
                     visitIdentifier: function () {
                         if (pattern.value === '_') return;
 
@@ -956,8 +977,54 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                             } : check;
                         }, null);
                     },
+                    visitCall: function() {  
+                        if (pattern.func && pattern.func.value === ':' && pattern.args && pattern.args.length === 2) {  
+                            var lengthCheck = {  
+                                type: "LogicalExpression",  
+                                operator: "&&",  
+                                left: {  
+                                    type: "CallExpression",  
+                                    callee: {  
+                                        type: "MemberExpression",  
+                                        object: { type: "Identifier", name: "Array" },  
+                                        property: { type: "Identifier", name: "isArray" }  
+                                    },  
+                                    arguments: [valueExpr]  
+                                },  
+                                right: {  
+                                    type: "BinaryExpression",  
+                                    operator: ">=",  
+                                    left: {  
+                                        type: "MemberExpression",  
+                                        object: valueExpr,  
+                                        property: { type: "Identifier", name: "length" }  
+                                    },  
+                                    right: { type: "Literal", value: 1 }  
+                                }  
+                            };  
+                            
+                            var headTest = buildTest(pattern.args[0], {  
+                                type: "MemberExpression",  
+                                object: valueExpr,  
+                                property: { type: "Literal", value: 0 },  
+                                computed: true  
+                            });  
+                            
+                            if (headTest && headTest.type !== "Literal") {  
+                                return {  
+                                    type: "LogicalExpression",  
+                                    operator: "&&",  
+                                    left: lengthCheck,  
+                                    right: headTest  
+                                };  
+                            }  
+                            
+                            return lengthCheck;  
+                        }  
+                        
+                        return { type: "Literal", value: true };  
+                    },
                     visitListConstPattern: function () {
-                        // Check if it's an array with at least the required length  
                         var lengthCheck = {    
                             type: "LogicalExpression",    
                             operator: "&&",    

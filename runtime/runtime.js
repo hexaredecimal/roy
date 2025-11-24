@@ -92,11 +92,13 @@ const __op_at__i_Number_j = (a) => {
 
 // Dynamic Arrays (Lists)
 
-const __rml_sys_list_addFirst = (value) => {
-    return (list) => {
-        return [value, ...list]
-    }
-}
+const __rml_sys_list_addFirst = value => list => {
+    const result = Array.isArray(list)
+        ? [value, ...list]
+        : [value, list];
+
+    return result.flat(Infinity);
+};
 
 const __rml_sys_list_addLast = (value) => {
     return (list) => {
