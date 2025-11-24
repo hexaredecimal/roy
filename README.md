@@ -9,7 +9,7 @@ imperative concepts (Such as loops and references) while still being a functiona
 ## Features
 - [X] No `do` block/Monads
 - [X] Function currying
-- [X] Structural typing (WIP)
+- [X] Structural typing
 - [X] Cli Improvements
 - [X] Modules
 - [X] Proper error messages
@@ -19,23 +19,31 @@ imperative concepts (Such as loops and references) while still being a functiona
 - [X] Typed external functions
 - [X] Annotations
 - [X] Operator overloading
-- [ ] Mutability/References
 - [X] Custom stdlib
 - [X] Build binaries (Using QuickJS as the runtime)
 - [X] Let in expression
 
-## What I aim to achieve
+## Example
 ```ocaml
-
 open Std.Printf
+open Std.List ((:), map, filter)
+open Std.Pipe ((|>))
 
-let add a b = sum a b
-  where
-    sum a b = a + b
+let main () = 
+  1:2:3:4:5
+  |> map (\x -> x * 2)
+  |> filter (\x -> x > 2)
+  |> Printf.println
+```
 
-let main = 
-  Print.print "{}" [add 10 10]
-  
+## Building
+Run the following steps in sequence
+ 
+```sh
+$ git clone https://github.com/hexaredecimal/Llaml.git
+$ cd Llaml
+$ make || make clean && make dist
+$ ./llml help
 ```
 
 
