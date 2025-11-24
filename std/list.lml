@@ -1,12 +1,6 @@
 
-#[export]
-let (:) val arr = __rml_sys_list_addFirst val arr
-
-#[export]
-let (:) arr val = __rml_sys_list_addLast val arr
-
-#[export]
-let (:) val val2 = val : (val2 : [])
+#[extern("__rml_sys_list_add"), export]
+let (:) (val: 'a) (arr: ['a]) : ['a]
 
 #[export]
 let map f list =
