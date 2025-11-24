@@ -1,0 +1,4 @@
+
+#[export]
+let (|>) a f = f a 
+
