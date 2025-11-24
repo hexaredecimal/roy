@@ -162,7 +162,7 @@ var grammar = {
     ],
 
     "patternObject": [
-      ["{ optPatternPairs }", n("$$ = new yy.ObjectPattern($2);")]
+      ["{ optPatternPairs }", n("$$ = new yy.Object($2);")]
     ],
 
     "optPatternPairs": [
