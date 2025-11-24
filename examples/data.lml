@@ -1,0 +1,33 @@
+open Std.Adt.Option (Option)
+open Std.Printf
+
+let none = None ()
+let printSomething m = 
+  when m is
+    | Some x = Printf.println x
+    | None = Printf.println "Empty"
+
+type Either 'a 'b = Left 'a | Right 'b
+
+let printString (s: String) =
+  Printf.println s
+
+let printResult e = 
+  when e is
+  | Left x = Printf.println x
+  | Right x = printString x
+
+// Won't compile:
+// printResult (Right 10)
+
+type Bool = True | False
+
+let getBool b ifTrue ifFalse = 
+  when b is
+    | True = ifTrue
+    | False = ifFalse
+
+type MyList 'a = Empty | Many 'a (MyList 'a)
+
+let empty = Empty ()
+
