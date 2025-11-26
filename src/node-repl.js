@@ -6,6 +6,8 @@ var compile = require('./compile').compile,
     nodeToType = require('./typeinference').nodeToType,
     _ = require('underscore');
 
+var path = require("node:path");
+
 const { parseCLI } = require('./cli');
 
 var getSandbox = function () {
@@ -219,27 +221,29 @@ var importModule = function (name, env, opts) {
 };
 
 var runRoy = function (argv, opts) {
-    var fs = require('fs');
-    var path = require('path');
-    var vm = require('vm');
+    const fs = require('fs');
+    const path = require('path');
+    const vm = require('vm');
 
-    var extensions = /\.lml$/;
+    const extensions = /\.lml$/;
 
-    var exported;
-    var env = {};
-    var aliases = {};
-    var sandbox = getSandbox();
+    let exported;
+    const env = {};
+    const aliases = {};
+    const sandbox = getSandbox();
 
     _.each(argv, function (filename) {
-        var source = getFileContents(filename);
-        var rtSources = getFileContents("./runtime/runtime.js");
+        const source = getFileContents(filename);
+        const rtSources = getFileContents("./runtime/runtime.js");
 
         exported = {};
-        var outputPath = filename.replace(extensions, '.js');
-        var SourceMapGenerator = require('source-map').SourceMapGenerator;
-        var sourceMap = new SourceMapGenerator({ file: path.basename(outputPath) });
+        const outputPath = path.basename(
+           filename.replace(extensions, '.js')
+        );
+        const SourceMapGenerator = require('source-map').SourceMapGenerator;
+        const sourceMap = new SourceMapGenerator({ file: path.basename(outputPath) });
 
-        var compiled = compile(source, env, aliases, {
+        const compiled = compile(source, env, aliases, {
             nodejs: opts.nodejs,
             filename: filename,
             run: false,
@@ -257,7 +261,7 @@ var runRoy = function (argv, opts) {
         
         if (opts.run) {
             fs.writeFileSync(outputPath, output);
-            var binaryPath = filename.replace(extensions, '');
+            const binaryPath = filename.replace(extensions, '');
             cmd(`qjsc -o ${binaryPath} ${outputPath}`);
             fs.unlinkSync(outputPath); 
             process.stdout.write(cmd(`./${binaryPath}`))
@@ -269,7 +273,7 @@ var runRoy = function (argv, opts) {
                 return;
             } else if (opts.exe) {
                 fs.writeFileSync(outputPath, output);
-                var binaryPath = filename.replace(extensions, '');
+                const binaryPath = filename.replace(extensions, '');
                 cmd(`qjsc -m --keep-source -o ${binaryPath} ${outputPath}`);
                 fs.unlinkSync(outputPath); 
             }
