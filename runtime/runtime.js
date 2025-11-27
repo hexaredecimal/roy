@@ -391,4 +391,9 @@ function __rml_get_platform() {
     return os.platform;
 }
 
+// Stdin 
+function __rml_prompt(message) {
+    std.out.puts(message);
+    return std.in.getline();
+}
 

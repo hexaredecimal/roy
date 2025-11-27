@@ -2,3 +2,5 @@
 #[extern("std.in.getline"), export]
 let getLine () : String
 
+#[extern("__rml_prompt"), export]
+let prompt (message: String) : String
