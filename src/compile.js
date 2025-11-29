@@ -1045,7 +1045,7 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
                                     object: valueExpr,    
                                     property: { type: "Identifier", name: "length" }    
                                 },    
-                                right: { type: "Literal", value: pattern.patterns.length }    
+                                right: { type: "Literal", value: 1 }    
                             }    
                         };    
                     

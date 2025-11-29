@@ -6,7 +6,6 @@ let (:) (val: 'a) (arr: ['a]) : ['a]
 let map f list =
   when list is
     | [] = []
-    | [o] = f o : []
     | h:rest = f h : map f rest
 
 
@@ -14,7 +13,6 @@ let map f list =
 let filter f list = 
   when list is
     | [] = []
-    | [o] = if f o then o:[] else filter f []
     | h:rest =
        if f h then 
          h:filter f rest
@@ -24,7 +22,6 @@ let filter f list =
 let length arr = 
   when arr is
     | [] = 0
-    | [_] = 1
     | _:t = 1 + length t
 
 
