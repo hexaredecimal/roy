@@ -27,9 +27,6 @@ const __rml_sys_neg = (a) => {
 }
 
 
-
-
-
 // Comparison Operations
 
 const __rml_sys_eq = (a, b) => {      
@@ -71,23 +68,13 @@ const __rml_sys_bnot = (a) => {
 }
 
 // String concat
-
-const __op_add_add_String_String_String = (a) => {
+const __rml_sys_string_concat = (a) => {
     return (b) => {
         return a + b;
     }
 }
 
-// Array indexing
-
-const __op_at__i_Number_j = (a) => {
-    return (b) => {
-        return a[b];
-    }
-}
-
 // Dynamic Arrays (Lists)
-
 const __rml_sys_list_add = (value, list) => {
     return  [value, ...list];
 }
