@@ -38,16 +38,12 @@ const __op_mod_Number_Number_Number = (a) => {
 
 // Comparison Operations
 
-const __op_eq_eq__a__b_Boolean = (a) => {
-    return (b) => {
-        return a === b;
-    }
+const __rml_sys_eq = (a, b) => {      
+  return a === b;
 }
 
-const __op_not_eq__e__f_Boolean = (a) => {
-    return (b) => {
-        return a != b;
-    }
+const __rml_sys_neq = (a, b) => {      
+  return a !== b;
 }
 
 const __op_gt_Number_Number_Boolean = (a) => {
