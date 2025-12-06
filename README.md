@@ -31,10 +31,10 @@ open Std.List ((:), map, filter)
 open Std.Pipe ((|>))
 
 let main () = 
-  1:2:3:4:5
-  |> map (\x -> x * 2)
-  |> filter (\x -> x > 2)
-  |> Printf.println
+  1:2:3:4:5:[]
+      |> map (\x -> x * 2)
+      |> filter (\x -> x > 2)
+      |> Printf.println
 ```
 
 
