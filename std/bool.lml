@@ -1,0 +1,16 @@
+
+
+
+#[extern("__rml_sys_eq"), export]
+let (==) (a: 'a) (b: 'b) : Boolean
+
+#[extern("__rml_sys_neq"), export]
+let (!=) (a: 'a) (b: 'b) : Boolean
+
+#[export]
+let isTrue (b: Boolean) : Boolean = b == true
+
+#[export]
+let isFalse (b: Boolean) : Boolean = b != true
+
+
