@@ -1573,19 +1573,6 @@ var setUpEnv = function(env) {
         builtin: true
     }];
 
-    env.$operators.binary['=='] = [{
-        types: [new t.Variable(), new t.Variable(), BooleanType],
-        name: '==',
-        type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
-        builtin: true
-    }];
-
-    env.$operators.binary['!='] = [{
-        types: [new t.Variable(), new t.Variable(), BooleanType],
-        name: '!=',
-        type: new t.FunctionType([new t.Variable(), new t.Variable(), BooleanType]),
-        builtin: true
-    }];
     env.$operators.binary['<='] = [{
         types: [NumberType, NumberType, BooleanType],
         name: '<=',
