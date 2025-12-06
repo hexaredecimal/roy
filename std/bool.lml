@@ -1,16 +1,31 @@
 
 
-
-#[extern("__rml_sys_eq"), export]
-let (==) (a: 'a) (b: 'b) : Boolean
-
-#[extern("__rml_sys_neq"), export]
-let (!=) (a: 'a) (b: 'b) : Boolean
-
 #[export]
 let isTrue (b: Boolean) : Boolean = b == true
 
 #[export]
 let isFalse (b: Boolean) : Boolean = b != true
 
+let fromString s =
+  when s is
+   | "true" = true
+   | "t" = true
+   | _ = false
+
+let toString b = 
+  when b is
+    | true = "true"
+    | _ = "false"
+
+
+
+#[extern("__rml_sys_band"), export]
+let (&&) (a: Boolean) (b: Boolean) : Boolean
+
+
+#[extern("__rml_sys_bor"), export]
+let (||) (a: Boolean) (b: Boolean) : Boolean
+
+#[extern("__rml_sys_bnot"), export]
+let (!) (a: Boolean) : Boolean
 

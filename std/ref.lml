@@ -1,0 +1,13 @@
+
+#[extern("__rml_sys_toref"), export]
+let (&) (a: 'a) : &'a
+
+#[extern("__rml_sys_deref"), export]
+let (*) (a: &'a) : 'a
+
+#[extern("__rml_sys_setref"), export]
+let (=) (ref: &'a) (v: 'a): &'a
+
+
+
+

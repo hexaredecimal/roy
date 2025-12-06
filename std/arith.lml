@@ -1,0 +1,22 @@
+
+
+#[extern("__rml_sys_add"), export]
+let (+) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_sub"), export]
+let (-) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_mul"), export]
+let (*) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_div"), export]
+let (/) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_mod"), export]
+let (%) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_neg"), export]
+let (-) (a: Number) : Number
+
+
+

@@ -8,4 +8,7 @@ let size (value: 'a) : String
 #[extern("__rml_string_fmt"), export]
 let format (fmt: String) (args: [Any]) : Unit
 
+#[extern("__rml_sys_string_concat"), export]
+let (++) (a: String) (b: String): String
+
 

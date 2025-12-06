@@ -1,0 +1,22 @@
+
+
+#[extern("__rml_sys_eq"), export]
+let (==) (a: 'a) (b: 'b) : Boolean
+
+#[extern("__rml_sys_neq"), export]
+let (!=) (a: 'a) (b: 'b) : Boolean
+
+#[extern("__rml_sys_gt"), export]
+let (>) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_gte"), export]
+let (>=) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_lt"), export]
+let (<) (a: Number) (b: Number) : Number
+
+#[extern("__rml_sys_lte"), export]
+let (<=) (a: Number) (b: Number) : Number
+
+
+

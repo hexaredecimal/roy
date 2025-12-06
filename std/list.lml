@@ -1,7 +1,7 @@
 
 
 open Std.Adt.Option (Option)
-open Std.Bool ((==), (!=))
+open Std.Compare ((==), (!=))
 
 #[extern("__rml_sys_list_add"), export]
 let (:) (val: 'a) (arr: ['a]) : ['a]
@@ -42,5 +42,9 @@ let nth index list =
           Some h   
         else   
           nth (index - 1) rest
+
+
+#[export]
+let (@) index list = nth index list
 
 
