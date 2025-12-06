@@ -2,39 +2,33 @@ import * as std from 'std';
 import * as os from 'os';
 
 // Numeric Operations
-const __op_add_Number_Number_Number = (a) => {
-    return (b) => {
-        return a + b;
-    }
+const __rml_sys_add = (a, b) => {
+  return a + b;
 }
 
-const __op_sub_Number_Number_Number = (a) => {
-    return (b) => {
-        return a - b;
-    }
+const __rml_sys_sub = (a, b) => {
+  return a - b;
 }
 
-const __op_sub_Number_Number = (a) => {
-    return -a;
+const __rml_sys_mul = (a, b) => {
+  return a * b;
 }
 
-const __op_mul_Number_Number_Number = (a) => {
-    return (b) => {
-        return a * b;
-    }
+const __rml_sys_div = (a, b) => {
+  return a / b;
 }
 
-const __op_div_Number_Number_Number = (a) => {
-    return (b) => {
-        return a / b;
-    }
+const __rml_sys_mod = (a, b) => {
+  return a % b;
 }
 
-const __op_mod_Number_Number_Number = (a) => {
-    return (b) => {
-        return a % b;
-    }
+const __rml_sys_neg = (a) => {
+  return -a;
 }
+
+
+
+
 
 // Comparison Operations
 
@@ -46,28 +40,34 @@ const __rml_sys_neq = (a, b) => {
   return a !== b;
 }
 
-const __op_gt_Number_Number_Boolean = (a) => {
-    return (b) => {
-        return a > b;
-    }
+const __rml_sys_gt = (a, b) => {
+  return a > b;
 }
 
-const __op_lt_Number_Number_Boolean = (a) => {
-    return (b) => {
-        return a < b;
-    }
+const __rml_sys_lt = (a, b) => {
+  return a < b;
 }
 
-const __op_gt_eq_Number_Number_Boolean = (a) => {
-    return (b) => {
-        return a >= b;
-    }
+const __rml_sys_gte = (a, b) => {
+    return a >= b;
 }
 
-const __op_lt_eq_Number_Number_Boolean = (a) => {
-    return (b) => {
-        return a <= b;
-    }
+const __rml_sys_lte = (a, b) => {
+    return a <= b;
+}
+
+
+
+const __rml_sys_band = (a, b) => {
+    return a && b;
+}
+
+const __rml_sys_bor = (a, b) => {
+    return a || b;
+}
+
+const __rml_sys_bnot = (a) => {
+    return !a;
 }
 
 // String concat
@@ -115,19 +115,17 @@ function __rml_string_size(str) {
 
 // ref
 // toRef
-function __op_and_(val) {
+function __rml_sys_toref(val) {
   return {inner: val};
 }
 
-function __op_mul_({inner: val}) {
+function __rml_sys_deref({inner: val}) {
   return val;
 }
 
-const __op_eq_ = (ref) => {
-    return (val) => {
-      ref.inner = val;
-      return ref;
-    }
+const __rml_sys_setref = (ref, val) => {
+  ref.inner = val;
+  return ref;
 }
 
 
