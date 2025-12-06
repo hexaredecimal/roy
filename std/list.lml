@@ -1,4 +1,8 @@
 
+
+open Std.Adt.Option (Option)
+open Std.Bool ((==), (!=))
+
 #[extern("__rml_sys_list_add"), export]
 let (:) (val: 'a) (arr: ['a]) : ['a]
 
@@ -27,4 +31,16 @@ let length arr =
 
 #[extern("__rml_sys_list_reduce"), export]
 let reduce (f: 'a -> 'b) (s: 'a) (arr: ['a]) : ['b]
+
+#[export]  
+let nth index list = 
+  when list is  
+    | [] = None  
+    | [h] = if index == 0 then Some h else None  
+    | h:rest =   
+        if index == 0 then   
+          Some h   
+        else   
+          nth (index - 1) rest
+
 
