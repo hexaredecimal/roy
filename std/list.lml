@@ -2,6 +2,7 @@
 
 open Std.Adt.Option (Option)
 open Std.Compare ((==), (!=))
+open Std.Arith ((+), (-))
 
 #[extern("__rml_sys_list_add"), export]
 let (:) (val: 'a) (arr: ['a]) : ['a]
