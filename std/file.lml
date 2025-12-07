@@ -3,11 +3,6 @@ open Std.Adt.Option (Option)
 
 type File = Number
 
-#[export]
-let FileFlags = {
-  O_APPEND: 1024, O_CREAT: 64, O_EXCL: 128, O_RDONLY: 0, O_RDWR: 2, O_TRUNC: 512, O_WRONLY: 1
-}
-
 #[extern("__rml_open"), export]
 let fromPath (filename: String) (flags: Number) : Option File
 
@@ -17,6 +12,6 @@ let close (file: File) : Unit
 #[extern("os.isatty"), export]
 let isAtty (file: File) : Boolean
 
-#[exterm("__rml_read_to_string"), export]
+#[extern("__rml_read_to_string"), export]
 let readToString (path: String): Option String
 
