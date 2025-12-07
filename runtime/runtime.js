@@ -372,6 +372,14 @@ function __rml_get_platform() {
     return os.platform;
 }
 
+function __rml_mkdir(path) {
+    return os.mkdir(path) == 0;
+}
+
+function __rml_realpath(path) {
+    return os.realpath(path)[0];
+}
+
 // Stdin 
 function __rml_prompt(message) {
     std.out.puts(message);
