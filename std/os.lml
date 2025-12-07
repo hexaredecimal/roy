@@ -17,3 +17,9 @@ let rename (oldName: String) (newName: String) : Result Unit String
 #[extern("__rml_get_platform"), export]
 let getPlatform () : String
 
+#[extern("__rml_mkdir"), export]
+let makeDirectory (dirPath: String) : String
+
+#[extern("__rml_realpath"), export]
+let getRealPath (name: String) : String
+
