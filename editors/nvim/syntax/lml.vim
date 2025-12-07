@@ -39,16 +39,17 @@ syn region llmlComment start="\/\/" end="$" contains=llmlComment,llmlTodo,@Spell
 syn keyword  llmlTodo contained TODO FIXME
 
 syn keyword  llmlKeyword  let in function with when is 
-syn keyword  llmlKeyword  type open if then else
+syn keyword  llmlKeyword  type open if then else where
 
 
-syn keyword  llmlBoolean      true false
+syn keyword  llmlBoolean      true false export extern
 syn match    llmlConstructor  "(\s*)"
 syn match    llmlConstructor  "\[\s*\]"
 syn match    llmlConstructor  "#\[\s*\]"
 syn match    llmlConstructor  "\u\(\w\|'\)*\>"
 
 syn match llmlFnIdent "[a-zA-Z_][a-zA-Z0-9_]*\s*\ze("
+syn match llmIdent "[a-zA-Z_][a-zA-Z0-9_]*"
 
 " Module prefix
 syn match    llmlModPath      "\u\(\w\|'\)*\."he=e-1
