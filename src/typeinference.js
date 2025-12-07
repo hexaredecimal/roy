@@ -889,7 +889,7 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
 
                 for (var i = 0; i < providedArgCount; i++) {
                     if (i >= expectedArgCount) {
-                        errors.reportError(node.filename, node.lineno, node.column, "Too many arguments provided on line " + node);
+                        errors.reportError(node.filename, node.lineno, node.column, `Too many arguments provided. Expected ${expectedArgCount} but found ${providedArgCount}`);
                     }
                     unify(types[i], funType.types[i], node);
                 }
