@@ -1,0 +1,56 @@
+
+
+#[export]
+let SIGABRT : Number = 6
+
+#[export]
+let SIGALRM : Number = 14
+
+#[export]
+let SIGCHLD : Number = 17
+
+#[export]
+let SIGCONT : Number = 18
+
+#[export]
+let SIGFPE : Number = 8
+
+#[export]
+let SIGILL : Number = 4
+
+#[export]
+let SIGINT : Number = 2
+
+#[export]
+let SIGPIPE : Number = 13
+
+#[export]
+let SIGQUIT : Number = 3
+
+#[export]
+let SIGSEGV : Number = 11
+
+#[export]
+let SIGSTOP : Number = 19
+
+#[export]
+let SIGTERM : Number = 15
+
+#[export]
+let SIGTSTP : Number = 20
+
+#[export]
+let SIGTTIN : Number = 21
+
+#[export]
+let SIGTTOU : Number = 22
+
+#[export]
+let SIGUSR1 : Number = 10
+
+#[export]
+let SIGUSR2 : Number = 12
+
+#[extern("os.signal"), export]
+let signal (sig: Number) : Unit
+

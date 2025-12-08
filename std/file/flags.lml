@@ -1,0 +1,22 @@
+
+#[export]
+let APPEND: Number = 1024
+
+#[export]
+let CREATE: Number = 64
+
+#[export]
+let EXCL: Number = 128
+
+#[export]
+let READONLY: Number = 0
+
+#[export]
+let READWRITE: Number = 2
+
+#[export]
+let TRUNCATE: Number = 512
+
+#[export]
+let WRITEONLY: Number = 1
+
