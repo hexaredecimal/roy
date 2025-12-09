@@ -8,10 +8,10 @@ imperative concepts (Such as loops and references) while still being a functiona
 
 ## Features
 - [X] No `do` block/Monads
-- [X] Function currying
+- [X] Function currying (Default lazy evaluation)
 - [X] Structural typing
 - [X] Cli Improvements
-- [X] Modules
+- [X] Modules (Not as code blocks but as **Files**, like in ecmascript6+)
 - [X] Proper error messages
 - [ ] Formatter/Pretty printer (WIP)
 - [X] Include files
