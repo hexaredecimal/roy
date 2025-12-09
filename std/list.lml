@@ -3,6 +3,8 @@
 open Std.Adt.Option (Option)
 open Std.Compare ((==), (!=))
 open Std.Arith ((+), (-))
+open Std.String ((++), from)
+
 
 #[extern("__rml_sys_list_add"), export]
 let (:) (val: 'a) (arr: ['a]) : ['a]
@@ -47,5 +49,20 @@ let nth index list =
 
 #[export]
 let (@) index list = nth index list
+
+#[export]
+let join list = 
+  when list is
+   | [] = ""
+   | h:rest = 
+     from h ++ join rest
+
+#[export]
+let joinBy delim list = 
+  when list is
+   | [] = ""
+   | [a] = from a
+   | h:rest = 
+     from h ++ delim ++ joinBy delim rest
 
 
