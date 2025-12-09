@@ -154,12 +154,12 @@ var compileNodeWithEnvToJsAST = function (n, env, opts) {
         visitImportIntoModule: function () {
             
             var modulePathKey = n.path.map(p => p.toLowerCase()).join('/');  
-            
             var imported = env.$importCache && env.$importCache[modulePathKey]   
                 ? env.$importCache[modulePathKey].imported   
                 : false;  
 
-            const prefix = imported ? "./" : "./tmp/";
+            const isMainFile = n.filename.indexOf("/") == -1;  
+            const prefix =  !isMainFile ? "./" : "./tmp/";
             var modulePath = prefix + n.path.join('.') + ".js";  
             
             var cached = env.$importCache && env.$importCache[modulePathKey]   
