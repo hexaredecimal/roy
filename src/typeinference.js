@@ -500,9 +500,16 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             // Create new environment for the module  
 
             if (env.$importCache[modulePath]) { 
+                if (env.$importCache[modulePath].compiling) {  
+                    // module is still being compiled - return early  
+                    // the circular dependency will be resolved once both modules finish  
+                    return new t.UnitType();  
+                } 
+
                 const moduleAst = env.$importCache[modulePath].ast;
                 const moduleEnv = env.$importCache[modulePath].env;
                 let exportedSymbols = getExports(moduleAst.body, moduleEnv);
+
 
                 if (node.liftedIds && node.liftedIds.length > 0) {    
                     // Selective import: open Std.IO.{print, println}    
@@ -536,10 +543,20 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             var tmpDir = path.join(process.cwd(), 'tmp');  
             if (!fs.existsSync(tmpDir)) {  
                 fs.mkdirSync(tmpDir, { recursive: true });  
-            }  
+            } 
+
+            // Create placeholder in cache BEFORE compilation  
+            env.$importCache[modulePath] = {  
+                env: null,  // Will be set after compilation  
+                exports: {},  // Will be populated after compilation  
+                ast: null,  // Will be set after compilation  
+                imported: path.dirname(node.filename) === '.',  
+                compiling: true  // Flag to detect real cycles  
+            };  
+
             let moduleEnv = {};
-            setUpEnv(moduleEnv)  
             let moduleAliases = {};  
+            moduleEnv.$importCache = env.$importCache;
             let rtSources = fs.readFileSync("./runtime/runtime.js", 'utf8');
             let source = fs.readFileSync(filePath, 'utf8'); 
 
@@ -562,11 +579,13 @@ var analyse = function (node, env, nonGeneric, aliases, constraints) {
             let exportedSymbols = getExports(moduleAst.body, moduleEnv);
 
             //console.log(path.dirname(node.filename), path.dirname(__dirname))
+             
             env.$importCache[modulePath] = {  
                 env: moduleEnv,  
                 exports: exportedSymbols,  
                 ast: compiled.ast,
-                imported: path.dirname(node.filename) !== '.'
+                imported: path.dirname(node.filename) === '.' 
+
             };
 
 
@@ -1505,7 +1524,7 @@ var typecheck = function (ast, env, aliases, opts) {
 
             return type;
         } catch (err) {
-            //console.log(err)
+            console.log(err)
             errors.reportError(node.filename, node.lineno, node.column, err);
         }
     });
