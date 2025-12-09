@@ -1,0 +1,7 @@
+
+
+#[extern("__rml_string_get_args"), export]
+let getArgs () : [String]
+
+
+
