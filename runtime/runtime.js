@@ -68,10 +68,8 @@ const __rml_sys_bnot = (a) => {
 }
 
 // String concat
-const __rml_sys_string_concat = (a) => {
-    return (b) => {
-        return a + b;
-    }
+const __rml_sys_string_concat = (a, b) => {
+  return a + b;
 }
 
 // Dynamic Arrays (Lists)
@@ -98,6 +96,18 @@ function __rml_toString(value) {
 
 function __rml_string_size(str) {
   return str.length;
+}
+
+function __rml_string_split(delim, str){
+  return str.split(delim);
+}
+
+function __rml_string_tolist(str) {
+  const arr = [];
+  for (let c of str) {
+    arr.push(c);
+  }
+  return arr; 
 }
 
 // ref
@@ -347,7 +357,7 @@ function __rml_open(filename, flags) {
 }
 
 function __rml_read_to_string(filename) {
-    const a = std.loadFile("file.txt"); 
+    const a = std.loadFile(filename); 
     if (!a) return new None()
     return new Some(a);
 }
