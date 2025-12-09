@@ -81,6 +81,18 @@ const __rml_sys_list_reduce = (func, def, list) => {
     return list.reduce(func, def);
 }
 
+function __rml_string_get_args() {
+  return scriptArgs;
+}
+
+// Number Utils
+function __rml_string_parse_num(str) {
+  const result = parseInt(str);
+  if (Number.isNaN(result))
+    return new Err("Input is not a number");
+  return new Ok(result);
+}
+
 
 
 // Unit
