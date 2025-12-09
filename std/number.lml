@@ -1,8 +1,15 @@
 
-#[export]
-let MAX_VALUE = 9007199254740991
+open Std.Adt.Result (Result)
+open Std.Arith ((-))
 
 #[export]
-let MIN_VALUE = -9007199254740991
+let MAX_VALUE : Number = 9007199254740991
+
+#[export]
+let MIN_VALUE : Number = -9007199254740991
+
+#[extern("__rml_string_parse_num"), export]
+let parseNumber (str: String) : Result Number String
+
 
 
